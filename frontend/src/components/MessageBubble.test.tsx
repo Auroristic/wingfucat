@@ -99,4 +99,39 @@ describe('MessageBubble Component', () => {
     );
     expect(screen.getByTestId('message-bubble-wrapper')).toHaveClass('justify-start');
   });
+
+  it('renders image attachment with correct PocketBase file URL', () => {
+    const imageMessage: Message = {
+      ...baseMessage,
+      id: 'img-123',
+      media_type: 'image',
+      attachment: 'sunset.webp',
+      text: 'Sunset at the beach',
+    };
+
+    render(<MessageBubble message={imageMessage} isSelf={true} />);
+
+    const img = screen.getByRole('img');
+    expect(img).toBeInTheDocument();
+    expect(img.getAttribute('src')).toContain('/api/files/messages/img-123/sunset.webp');
+    expect(screen.getByText('Sunset at the beach')).toBeInTheDocument();
+  });
+
+  it('renders audio attachment via AudioPlayer with correct file URL and duration', () => {
+    const audioMessage: Message = {
+      ...baseMessage,
+      id: 'audio-456',
+      media_type: 'audio',
+      attachment: 'note.webm',
+      duration: 18,
+    };
+
+    render(<MessageBubble message={audioMessage} isSelf={false} />);
+
+    expect(screen.getByTestId('audio-player')).toBeInTheDocument();
+    expect(screen.getByText('0:18')).toBeInTheDocument();
+    const playIcon = screen.getByText('play_arrow');
+    expect(playIcon).toBeInTheDocument();
+  });
 });
+

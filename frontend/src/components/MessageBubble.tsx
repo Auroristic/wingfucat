@@ -1,4 +1,6 @@
 import { Icon } from './Icon';
+import { AudioPlayer } from './AudioPlayer';
+import { pb } from '../lib/pocketbase';
 
 export interface Message {
   id: string;
@@ -28,8 +30,15 @@ export function formatMessageTime(dateString: string): string {
   });
 }
 
+export function getMessageFileUrl(message: { id: string; attachment?: string }): string {
+  if (!message.attachment) return '';
+  const base = pb.baseUrl ? pb.baseUrl.replace(/\/+$/, '') : '';
+  return `${base}/api/files/messages/${message.id}/${message.attachment}`;
+}
+
 export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleProps) {
   const isOwn = isSelf ?? (currentUserId ? message.sender === currentUserId : false);
+  const fileUrl = getMessageFileUrl(message);
 
   return (
     <div
@@ -44,6 +53,32 @@ export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleP
             : 'bg-zinc-900 text-zinc-100 border border-zinc-800 rounded-tl-xs'
         }`}
       >
+        {message.media_type === 'image' && fileUrl && (
+          <div className="overflow-hidden rounded-xl mb-1.5 max-w-full">
+            <img
+              src={fileUrl}
+              alt={message.text || 'Attachment'}
+              loading="lazy"
+              className="max-h-80 w-auto rounded-xl object-cover hover:opacity-95 transition-opacity cursor-pointer"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.open(fileUrl, '_blank', 'noopener,noreferrer');
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {message.media_type === 'audio' && fileUrl && (
+          <div className="py-1">
+            <AudioPlayer
+              src={fileUrl}
+              duration={message.duration}
+              isOwn={isOwn}
+            />
+          </div>
+        )}
+
         {message.text && (
           <p className="text-sm leading-relaxed whitespace-pre-wrap selection:bg-zinc-300">
             {message.text}

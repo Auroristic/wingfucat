@@ -1,5 +1,7 @@
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginView } from './components/LoginView';
+import { LiveMessageThread } from './components/MessageThread';
+import { MessageComposer } from './components/MessageComposer';
 import { Icon } from './components/Icon';
 
 function AuthenticatedApp() {
@@ -10,24 +12,39 @@ function AuthenticatedApp() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-black p-4 text-white">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon name="chat" className="text-3xl" />
-        <h1 className="text-xl font-semibold tracking-wide">wingfucat</h1>
-      </div>
-      <p className="text-sm text-zinc-400">
-        Signed in as{' '}
-        <span className="text-white font-medium">
-          {user.display_name || user.username || user.email || 'Partner'}
-        </span>
-      </p>
-      <button
-        onClick={logout}
-        className="mt-4 flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors cursor-pointer"
-      >
-        <Icon name="logout" className="text-base" />
-        Log out
-      </button>
+    <div className="flex h-dvh flex-col bg-black text-white">
+      {/* Header bar */}
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4">
+        <div className="flex items-center gap-2">
+          <Icon name="chat" className="text-xl text-zinc-300" />
+          <h1 className="text-sm font-semibold tracking-wide">wingfucat</h1>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-zinc-400">
+            {user.display_name || user.username || user.email || 'Partner'}
+          </span>
+          <button
+            type="button"
+            onClick={logout}
+            aria-label="Log out"
+            className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:text-white transition-colors cursor-pointer"
+          >
+            <Icon name="logout" className="text-base" />
+            <span>Log out</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main chat thread */}
+      <main className="flex-1 overflow-hidden flex flex-col">
+        <LiveMessageThread className="flex-1" />
+      </main>
+
+      {/* Message Composer */}
+      <footer className="shrink-0">
+        <MessageComposer currentUserId={user.id} />
+      </footer>
     </div>
   );
 }
@@ -41,4 +58,3 @@ export function App() {
 }
 
 export default App;
-

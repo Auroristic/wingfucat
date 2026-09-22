@@ -89,6 +89,70 @@ if (typeof globalThis.EventSource === 'undefined') {
   }
 }
 
+if (typeof globalThis.MediaRecorder === 'undefined') {
+  class MockMediaRecorder {
+    static isTypeSupported(mime: string) {
+      return mime.startsWith('audio/webm') || mime.startsWith('audio/mp4');
+    }
+    state = 'inactive';
+    stream: any;
+    mimeType: string;
+    ondataavailable: ((e: any) => void) | null = null;
+    onstop: (() => void) | null = null;
+    onerror: ((e: any) => void) | null = null;
+
+    constructor(stream: any, options?: any) {
+      this.stream = stream;
+      this.mimeType = options?.mimeType || 'audio/webm;codecs=opus';
+    }
+
+    start() {
+      this.state = 'recording';
+    }
+
+    stop() {
+      this.state = 'inactive';
+      if (this.ondataavailable) {
+        this.ondataavailable({ data: new Blob(['mock-audio-bytes'], { type: this.mimeType }) });
+      }
+      if (this.onstop) {
+        this.onstop();
+      }
+    }
+  }
+
+  Object.defineProperty(globalThis, 'MediaRecorder', {
+    value: MockMediaRecorder,
+    configurable: true,
+    writable: true,
+  });
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'MediaRecorder', {
+      value: MockMediaRecorder,
+      configurable: true,
+      writable: true,
+    });
+  }
+}
+
+if (typeof navigator !== 'undefined' && !navigator.mediaDevices) {
+  const mockMediaDevices = {
+    getUserMedia: async () => {
+      const mockTrack = { stop: () => {}, kind: 'audio', enabled: true };
+      return {
+        getTracks: () => [mockTrack],
+        getAudioTracks: () => [mockTrack],
+      };
+    },
+  };
+  Object.defineProperty(navigator, 'mediaDevices', {
+    value: mockMediaDevices,
+    configurable: true,
+    writable: true,
+  });
+}
+
+
 // Suppress known React 19 act(...) warnings for asynchronous state updates in happy-dom
 const originalConsoleError = console.error;
 console.error = (...args: any[]) => {
