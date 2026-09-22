@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useSyncExternalStore, startTransition } from 'react';
+import React, { createContext, useContext, useState, useCallback, useSyncExternalStore } from 'react';
 import type { RecordModel } from 'pocketbase';
 import { pb, authStore } from '../lib/pocketbase';
 
@@ -12,11 +12,7 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const subscribeToAuthStore = (callback: () => void) => {
-  return pb.authStore.onChange(() => {
-    startTransition(() => {
-      callback();
-    });
-  });
+  return pb.authStore.onChange(callback);
 };
 
 const getAuthSnapshot = (): RecordModel | null => {
@@ -29,9 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (identity: string, password: string, rememberMe = false) => {
-      startTransition(() => {
-        setIsLoading(true);
-      });
+      setIsLoading(true);
       try {
         authStore.setRememberMe(rememberMe);
         const authData = await pb.collection('users').authWithPassword(identity, password);
@@ -41,9 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           pb.authStore.save(authData.token, authData.record);
         }
       } finally {
-        startTransition(() => {
-          setIsLoading(false);
-        });
+        setIsLoading(false);
       }
     },
     []

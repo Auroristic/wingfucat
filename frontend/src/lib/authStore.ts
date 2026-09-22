@@ -64,13 +64,17 @@ export class PublicDeviceAuthStore extends BaseAuthStore {
 
     if (typeof window === 'undefined') return;
 
-    const data = JSON.stringify({ token, record });
-    if (this.rememberMe) {
-      window.localStorage?.setItem(this.storageKey, data);
-      window.sessionStorage?.removeItem(this.storageKey);
-    } else {
-      window.sessionStorage?.setItem(this.storageKey, data);
-      window.localStorage?.removeItem(this.storageKey);
+    try {
+      const data = JSON.stringify({ token, record });
+      if (this.rememberMe) {
+        window.localStorage?.setItem(this.storageKey, data);
+        window.sessionStorage?.removeItem(this.storageKey);
+      } else {
+        window.sessionStorage?.setItem(this.storageKey, data);
+        window.localStorage?.removeItem(this.storageKey);
+      }
+    } catch (_) {
+      // Ignore storage write failures (e.g. private browsing quota restrictions)
     }
   }
 
@@ -78,8 +82,12 @@ export class PublicDeviceAuthStore extends BaseAuthStore {
     super.clear();
 
     if (typeof window !== 'undefined') {
-      window.sessionStorage?.removeItem(this.storageKey);
-      window.localStorage?.removeItem(this.storageKey);
+      try {
+        window.sessionStorage?.removeItem(this.storageKey);
+        window.localStorage?.removeItem(this.storageKey);
+      } catch (_) {
+        // Ignore storage removal failures
+      }
     }
   }
 }
