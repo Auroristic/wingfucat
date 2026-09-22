@@ -1,6 +1,6 @@
 {$DOMAIN:wingfu.duckdns.org} {
     # Block PocketBase Admin Dashboard from public access
-    handle /_/* {
+    handle /_ /_/* {
         respond "Access denied" 403
     }
 

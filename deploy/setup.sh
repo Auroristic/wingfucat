@@ -16,6 +16,7 @@ APP_GROUP="couplechat"
 DOMAIN="${DOMAIN:-wingfu.duckdns.org}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@wingfu.local}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-ChangeMeNow123!}"
+REMOTE_TARGET="${REMOTE_TARGET:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -89,7 +90,7 @@ fi
 # 7. Deploy frontend static assets (if built)
 if [[ -d "${PROJECT_DIR}/frontend/dist" ]]; then
     log "Deploying built React frontend from ${PROJECT_DIR}/frontend/dist to /opt/couple-chat/pb_public..."
-    cp -r "${PROJECT_DIR}/frontend/dist"/* "/opt/couple-chat/pb_public/"
+    cp -r "${PROJECT_DIR}/frontend/dist/." "/opt/couple-chat/pb_public/"
 else
     log "Notice: No frontend/dist found. Ensure 'npm run build' is run before deployment."
     if [[ ! -f "/opt/couple-chat/pb_public/index.html" ]]; then
@@ -133,10 +134,27 @@ systemctl enable caddy
 systemctl reload caddy || systemctl restart caddy
 log "Caddy reloaded successfully."
 
-# 12. Install backup sync script
+# 12. Install backup sync script and daily cron schedule
 log "Installing backup sync script..."
 cp "${SCRIPT_DIR}/backup-sync.sh" /usr/local/bin/couple-chat-backup-sync
 chmod +x /usr/local/bin/couple-chat-backup-sync
+
+log "Installing daily off-box backup cron schedule in /etc/cron.d/couple-chat-backup..."
+mkdir -p /etc/cron.d
+cat << 'CRON_EOF' > /etc/cron.d/couple-chat-backup
+# /etc/cron.d/couple-chat-backup: run daily off-box sync at 03:15 UTC (following PocketBase 03:00 UTC internal backup)
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+15 3 * * * root [ -f /etc/default/couple-chat-backup ] && . /etc/default/couple-chat-backup; /usr/local/bin/couple-chat-backup-sync >> /var/log/couple-chat-backup.log 2>&1
+CRON_EOF
+chmod 644 /etc/cron.d/couple-chat-backup
+
+if [[ -n "${REMOTE_TARGET}" ]]; then
+    mkdir -p /etc/default
+    echo "REMOTE_TARGET=\"${REMOTE_TARGET}\"" > /etc/default/couple-chat-backup
+    chmod 600 /etc/default/couple-chat-backup
+fi
 
 # 13. Configure PocketBase settings (core rate limits & daily backups)
 log "Waiting for PocketBase service to become responsive on 127.0.0.1:8090..."
@@ -186,11 +204,13 @@ if [[ -n "${AUTH_TOKEN}" ]]; then
     if command -v node >/dev/null 2>&1; then
         if [[ -f "${PROJECT_DIR}/backend/setup_schema.js" ]]; then
             log "Configuring collections and security rules..."
-            node "${PROJECT_DIR}/backend/setup_schema.js" "http://127.0.0.1:8090" "${ADMIN_EMAIL}" "${ADMIN_PASSWORD}" || true
+            ADMIN_EMAIL="${ADMIN_EMAIL}" ADMIN_PASSWORD="${ADMIN_PASSWORD}" PB_URL="http://127.0.0.1:8090" \
+                node "${PROJECT_DIR}/backend/setup_schema.js" "http://127.0.0.1:8090" "${ADMIN_EMAIL}" "${ADMIN_PASSWORD}" || true
         fi
         if [[ -f "${PROJECT_DIR}/backend/seed.js" ]]; then
             log "Seeding partner accounts..."
-            node "${PROJECT_DIR}/backend/seed.js" "http://127.0.0.1:8090" "${ADMIN_EMAIL}" "${ADMIN_PASSWORD}" || true
+            ADMIN_EMAIL="${ADMIN_EMAIL}" ADMIN_PASSWORD="${ADMIN_PASSWORD}" PB_URL="http://127.0.0.1:8090" \
+                node "${PROJECT_DIR}/backend/seed.js" "http://127.0.0.1:8090" "${ADMIN_EMAIL}" "${ADMIN_PASSWORD}" || true
         fi
     fi
 else

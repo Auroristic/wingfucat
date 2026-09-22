@@ -191,7 +191,11 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
 }
 
 if (process.argv[1] && process.argv[1].endsWith('setup_schema.js')) {
-  setupSchema().catch(err => {
+  const pbUrl = process.argv[2] || process.env.PB_URL || 'http://127.0.0.1:8090';
+  const adminEmail = process.argv[3] || process.env.ADMIN_EMAIL || 'admin@wingfu.local';
+  const adminPassword = process.argv[4] || process.env.ADMIN_PASSWORD || 'ChangeMeNow123!';
+
+  setupSchema(pbUrl, adminEmail, adminPassword).catch(err => {
     console.error('Setup failed:', err);
     process.exit(1);
   });

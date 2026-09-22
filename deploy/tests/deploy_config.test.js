@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const deployDir = path.resolve(__dirname, '..');
+const projectDir = path.resolve(deployDir, '..');
 
 describe('Task 7: Production Deployment Configuration Tests', () => {
   const caddyfilePath = path.join(deployDir, 'Caddyfile');
@@ -26,9 +27,9 @@ describe('Task 7: Production Deployment Configuration Tests', () => {
       assert.match(content, /\{\$DOMAIN:wingfu\.duckdns\.org\}/, 'Should define domain with fallback');
     });
 
-    it('should block public access to PocketBase admin dashboard with 403', () => {
+    it('should block public access to PocketBase admin dashboard for both /_ and /_/* with 403', () => {
       const content = fs.readFileSync(caddyfilePath, 'utf-8');
-      assert.match(content, /handle\s+\/_\/\*\s*\{[^}]*respond\s+"Access denied"\s+403/s, 'Should block /_/* with 403');
+      assert.match(content, /handle\s+\/_\s+\/_\/\*\s*\{[^}]*respond\s+"Access denied"\s+403/s, 'Should block /_ and /_/* with 403');
     });
 
     it('should reverse proxy to 127.0.0.1:8090 with flush_interval -1 for SSE', () => {
@@ -127,11 +128,9 @@ describe('Task 7: Production Deployment Configuration Tests', () => {
         const oldFile = path.join(tempDir, 'backup_2026_01_01.zip');
         const newFile = path.join(tempDir, 'backup_2026_09_22.zip');
         fs.writeFileSync(oldFile, 'old backup');
-        // Give 100ms gap and set mtime
         fs.utimesSync(oldFile, new Date(Date.now() - 10000), new Date(Date.now() - 10000));
         fs.writeFileSync(newFile, 'new backup');
 
-        // Test with a mock sync command using mock script in a custom PATH or simple dry run
         const res = spawnSync('bash', [backupSyncPath, 'dummy-target'], {
           env: {
             ...process.env,
@@ -169,6 +168,9 @@ describe('Task 7: Production Deployment Configuration Tests', () => {
       assert.match(content, /pocketbase_.*linux_amd64\.zip/, 'Must download PocketBase Linux amd64 archive');
       assert.match(content, /couple-chat\.service/, 'Must configure couple-chat systemd service');
       assert.match(content, /Caddyfile/, 'Must configure Caddy web server');
+      assert.match(content, /\/etc\/cron\.d\/couple-chat-backup/, 'Must install daily off-box backup cron job');
+      assert.match(content, /frontend\/dist\/\./, 'Must copy frontend build assets using directory dot notation');
+      assert.match(content, /ADMIN_EMAIL="\$\{ADMIN_EMAIL\}"/, 'Must pass ADMIN_EMAIL environment variable to helper scripts');
     });
 
     it('should fail with exit code 1 when executed by non-root user', () => {
@@ -176,6 +178,22 @@ describe('Task 7: Production Deployment Configuration Tests', () => {
       const res = spawnSync('bash', [setupPath], { encoding: 'utf-8' });
       assert.strictEqual(res.status, 1);
       assert.match(res.stderr, /must be run as root/);
+    });
+  });
+
+  describe('Backend Scripts CLI/Env Handling', () => {
+    it('setup_schema.js should accept CLI arguments and environment variables', () => {
+      const content = fs.readFileSync(path.join(projectDir, 'backend', 'setup_schema.js'), 'utf-8');
+      assert.match(content, /process\.argv\[2\]\s*\|\|\s*process\.env\.PB_URL/);
+      assert.match(content, /process\.argv\[3\]\s*\|\|\s*process\.env\.ADMIN_EMAIL/);
+      assert.match(content, /process\.argv\[4\]\s*\|\|\s*process\.env\.ADMIN_PASSWORD/);
+    });
+
+    it('seed.js should accept CLI arguments and environment variables', () => {
+      const content = fs.readFileSync(path.join(projectDir, 'backend', 'seed.js'), 'utf-8');
+      assert.match(content, /process\.argv\[2\]\s*\|\|\s*process\.env\.PB_URL/);
+      assert.match(content, /process\.argv\[3\]\s*\|\|\s*process\.env\.ADMIN_EMAIL/);
+      assert.match(content, /process\.argv\[4\]\s*\|\|\s*process\.env\.ADMIN_PASSWORD/);
     });
   });
 });

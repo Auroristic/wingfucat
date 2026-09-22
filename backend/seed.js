@@ -37,7 +37,11 @@ export async function seedUsers(pbUrl = 'http://127.0.0.1:8090', adminEmail = 'a
 }
 
 if (process.argv[1] && process.argv[1].endsWith('seed.js')) {
-  seedUsers().catch(err => {
+  const pbUrl = process.argv[2] || process.env.PB_URL || 'http://127.0.0.1:8090';
+  const adminEmail = process.argv[3] || process.env.ADMIN_EMAIL || 'admin@wingfu.local';
+  const adminPassword = process.argv[4] || process.env.ADMIN_PASSWORD || 'ChangeMeNow123!';
+
+  seedUsers(pbUrl, adminEmail, adminPassword).catch(err => {
     console.error('Seed failed:', err);
     process.exit(1);
   });
