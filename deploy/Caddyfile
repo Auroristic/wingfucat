@@ -1,0 +1,11 @@
+{$DOMAIN:wingfu.duckdns.org} {
+    # Block PocketBase Admin Dashboard from public access
+    handle /_/* {
+        respond "Access denied" 403
+    }
+
+    # Reverse proxy app & realtime SSE
+    reverse_proxy 127.0.0.1:8090 {
+        flush_interval -1
+    }
+}

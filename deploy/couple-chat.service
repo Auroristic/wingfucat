@@ -1,0 +1,22 @@
+[Unit]
+Description=Couple Chat PocketBase Service
+After=network.target
+
+[Service]
+Type=simple
+User=couplechat
+Group=couplechat
+WorkingDirectory=/opt/couple-chat
+ExecStart=/opt/couple-chat/pocketbase serve --http=127.0.0.1:8090
+Restart=always
+RestartSec=5
+
+# Sandboxing hardening
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/couple-chat/pb_data
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
