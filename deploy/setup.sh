@@ -146,13 +146,13 @@ cat << 'CRON_EOF' > /etc/cron.d/couple-chat-backup
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-15 3 * * * root [ -f /etc/default/couple-chat-backup ] && . /etc/default/couple-chat-backup; /usr/local/bin/couple-chat-backup-sync >> /var/log/couple-chat-backup.log 2>&1
+15 3 * * * root [ -f /etc/default/couple-chat-backup ] && . /etc/default/couple-chat-backup; /usr/local/bin/couple-chat-backup-sync "$REMOTE_TARGET" >> /var/log/couple-chat-backup.log 2>&1
 CRON_EOF
 chmod 644 /etc/cron.d/couple-chat-backup
 
 if [[ -n "${REMOTE_TARGET}" ]]; then
     mkdir -p /etc/default
-    echo "REMOTE_TARGET=\"${REMOTE_TARGET}\"" > /etc/default/couple-chat-backup
+    echo "export REMOTE_TARGET=\"${REMOTE_TARGET}\"" > /etc/default/couple-chat-backup
     chmod 600 /etc/default/couple-chat-backup
 fi
 

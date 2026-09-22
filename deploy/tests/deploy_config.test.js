@@ -29,7 +29,8 @@ describe('Task 7: Production Deployment Configuration Tests', () => {
 
     it('should block public access to PocketBase admin dashboard for both /_ and /_/* with 403', () => {
       const content = fs.readFileSync(caddyfilePath, 'utf-8');
-      assert.match(content, /handle\s+\/_\s+\/_\/\*\s*\{[^}]*respond\s+"Access denied"\s+403/s, 'Should block /_ and /_/* with 403');
+      assert.match(content, /@admin\s+path\s+\/_\s+\/_\/\*/, 'Should define named matcher for /_ and /_/*');
+      assert.match(content, /handle\s+@admin\s*\{[^}]*respond\s+"Access denied"\s+403/s, 'Should handle @admin with 403');
     });
 
     it('should reverse proxy to 127.0.0.1:8090 with flush_interval -1 for SSE', () => {
@@ -171,6 +172,8 @@ describe('Task 7: Production Deployment Configuration Tests', () => {
       assert.match(content, /\/etc\/cron\.d\/couple-chat-backup/, 'Must install daily off-box backup cron job');
       assert.match(content, /frontend\/dist\/\./, 'Must copy frontend build assets using directory dot notation');
       assert.match(content, /ADMIN_EMAIL="\$\{ADMIN_EMAIL\}"/, 'Must pass ADMIN_EMAIL environment variable to helper scripts');
+      assert.match(content, /export REMOTE_TARGET=\\"?\$\{REMOTE_TARGET\}/, 'Must export REMOTE_TARGET to environment file');
+      assert.match(content, /couple-chat-backup-sync "\$REMOTE_TARGET"/, 'Must pass REMOTE_TARGET argument in cron job');
     });
 
     it('should fail with exit code 1 when executed by non-root user', () => {
