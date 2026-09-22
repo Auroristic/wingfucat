@@ -201,3 +201,22 @@ NoNewPrivileges=true
 [Install]
 WantedBy=multi-user.target
 ```
+
+---
+
+## 6. Subagent-Driven Execution Protocol for the Next Agent
+
+The next agent MUST use the **`superpowers:subagent-driven-development`** skill:
+1. **Fresh Subagent Per Task:**
+   - Dispatch a fresh implementer subagent per task (Tasks 2 through 7).
+   - Provide each subagent with the exact task brief and requirements from this document.
+2. **Review & Verification Gate:**
+   - After each subagent finishes, verify spec compliance and code quality before moving to the next task.
+   - Run tests for each task before marking it complete.
+3. **Commit & Push Flow:**
+   - Commit files in `/home/retro/retroistickx/projects/wingfucat` after each task.
+   - Push to `git push origin main`.
+4. **Continuous Execution:**
+   - Do NOT stall or ask "should I continue?" between tasks.
+   - Execute Tasks 2 -> 3 -> 4 -> 5 -> 6 -> 7 continuously until complete.
+
