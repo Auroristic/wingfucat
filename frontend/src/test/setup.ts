@@ -58,6 +58,37 @@ if (typeof window !== 'undefined') {
   });
 }
 
+if (typeof globalThis.EventSource === 'undefined') {
+  class MockEventSource {
+    url: string;
+    onopen: ((ev: any) => any) | null = null;
+    onmessage: ((ev: any) => any) | null = null;
+    onerror: ((ev: any) => any) | null = null;
+    readyState = 1;
+    constructor(url: string) {
+      this.url = url;
+    }
+    close() {}
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() {
+      return true;
+    }
+  }
+  Object.defineProperty(globalThis, 'EventSource', {
+    value: MockEventSource,
+    configurable: true,
+    writable: true,
+  });
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'EventSource', {
+      value: MockEventSource,
+      configurable: true,
+      writable: true,
+    });
+  }
+}
+
 // Suppress known React 19 act(...) warnings for asynchronous state updates in happy-dom
 const originalConsoleError = console.error;
 console.error = (...args: any[]) => {
