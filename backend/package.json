@@ -1,0 +1,12 @@
+{
+  "name": "wingfucat-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/schema_rules.test.js"
+  },
+  "dependencies": {
+    "pocketbase": "^0.25.0"
+  }
+}
