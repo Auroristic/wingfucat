@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { App } from './App';
 import * as AuthModule from './context/AuthContext';
+import { pb } from './lib/pocketbase';
 
 vi.mock('./components/MessageThread', () => ({
   LiveMessageThread: () => <div data-testid="live-thread">Live Message Thread</div>,
@@ -14,6 +15,12 @@ vi.mock('./components/MessageComposer', () => ({
 describe('App Root Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(pb.collection('users'), 'getFullList').mockResolvedValue([] as any);
+    vi.spyOn(pb.collection('chat_settings'), 'getFullList').mockResolvedValue([
+      { id: 'settings_1', archived_at: '' },
+    ] as any);
+    vi.spyOn(pb.collection('chat_settings'), 'subscribe').mockResolvedValue(vi.fn());
+    vi.spyOn(pb.collection('chat_settings'), 'unsubscribe').mockResolvedValue(undefined);
   });
 
   it('renders LoginView when user is not authenticated', () => {
