@@ -26,17 +26,36 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
   usersCollection.updateRule = '@request.auth.id = id';
   usersCollection.deleteRule = null;
 
-  // Add display_name if not exists
+  // Add display_name and username if not exists
   const existingUserFields = new Set(usersCollection.fields ? usersCollection.fields.map(f => f.name) : (usersCollection.schema || []).map(f => f.name));
   
-  if (!existingUserFields.has('display_name')) {
-    if (usersCollection.fields) {
+  if (usersCollection.fields) {
+    if (!existingUserFields.has('username')) {
+      usersCollection.fields.push({
+        name: 'username',
+        type: 'text',
+        required: false,
+        min: 3,
+        max: 50,
+      });
+    }
+    if (!existingUserFields.has('display_name')) {
       usersCollection.fields.push({
         name: 'display_name',
         type: 'text',
         max: 100,
       });
-    } else {
+    }
+    usersCollection.indexes = usersCollection.indexes || [];
+    if (!usersCollection.indexes.some(i => i.includes('username'))) {
+      usersCollection.indexes.push('CREATE UNIQUE INDEX idx_users_username ON users (username) WHERE username != ""');
+    }
+    usersCollection.passwordAuth = {
+      enabled: true,
+      identityFields: ['email', 'username']
+    };
+  } else {
+    if (!existingUserFields.has('display_name')) {
       usersCollection.schema.push({
         name: 'display_name',
         type: 'text',

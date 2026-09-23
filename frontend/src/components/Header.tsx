@@ -99,9 +99,9 @@ export function Header({
       <header
         className={`flex h-14 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 select-none ${className}`}
       >
-        {/* Left: Partner info & Connection status */}
+        {/* Left: Partner info & Network status */}
         <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center">
+          <div className="flex items-center justify-center">
             {partnerAvatarUrl ? (
               <img
                 src={partnerAvatarUrl}
@@ -113,22 +113,21 @@ export function Header({
                 {partnerInitial}
               </div>
             )}
-            <span
-              data-testid="connection-indicator"
-              title={isConnected ? 'Online' : 'Offline'}
-              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-zinc-950 transition-colors ${
-                isConnected ? 'bg-emerald-500' : 'bg-zinc-500'
-              }`}
-            />
           </div>
 
           <div className="flex flex-col leading-tight">
             <span className="text-xs font-semibold text-white tracking-tight truncate max-w-[120px] sm:max-w-[180px]">
               {partnerName}
             </span>
-            <span className="text-[10px] text-zinc-400">
-              {isConnected ? 'Online' : 'Offline'}
-            </span>
+            {!isConnected && (
+              <span
+                data-testid="connection-indicator"
+                className="flex items-center gap-1 text-[10px] text-amber-400 font-medium"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                Offline
+              </span>
+            )}
           </div>
         </div>
 

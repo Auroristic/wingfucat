@@ -25,7 +25,7 @@ describe('Header Component', () => {
     vi.clearAllMocks();
   });
 
-  it('renders partner info, avatar fallback, and connection indicator', () => {
+  it('renders partner info and avatar fallback without false online indicator', () => {
     render(
       <Header
         partner={{
@@ -40,10 +40,9 @@ describe('Header Component', () => {
     // Partner name should be visible
     expect(screen.getByText('Sweetheart')).toBeInTheDocument();
 
-    // Connection indicator should be active (online)
-    const indicator = screen.getByTestId('connection-indicator');
-    expect(indicator).toBeInTheDocument();
-    expect(indicator).toHaveClass('bg-emerald-500');
+    // No misleading online connection indicator
+    expect(screen.queryByTestId('connection-indicator')).toBeNull();
+    expect(screen.queryByText('Online')).toBeNull();
 
     // Logout and archive buttons exist with correct icons
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
@@ -66,7 +65,8 @@ describe('Header Component', () => {
     );
 
     const indicator = screen.getByTestId('connection-indicator');
-    expect(indicator).toHaveClass('bg-zinc-500');
+    expect(indicator).toBeInTheDocument();
+    expect(screen.getByText('Offline')).toBeInTheDocument();
   });
 
   it('calls logout handler when logout button is clicked', () => {
