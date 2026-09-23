@@ -163,7 +163,11 @@ export function MessageThread({
     <div
       ref={containerRef}
       data-testid="message-thread"
-      className={`flex-1 overflow-y-auto p-4 space-y-3 ${className}`}
+      className={`flex-1 overflow-y-auto px-4 pt-12 pb-16 space-y-3 ${className}`}
+      style={{
+        maskImage: 'linear-gradient(to bottom, transparent 0%, black 36px, black calc(100% - 48px), transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 36px, black calc(100% - 48px), transparent 100%)',
+      }}
     >
       {messages.map((message) => (
         <MessageBubble

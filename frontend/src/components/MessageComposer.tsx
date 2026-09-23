@@ -374,13 +374,13 @@ export function MessageComposer({
                 }`}
                 style={
                   theme.id === 'terminal-tui'
-                    ? { backgroundColor: '#000000', color: '#00ff41', borderColor: '#00ff41' }
+                    ? undefined
                     : theme.id === 'pink-cloud'
                     ? { backgroundColor: 'var(--theme-accent)', color: '#1a1017' }
                     : { backgroundColor: 'var(--theme-text-primary)', color: 'var(--theme-bg-primary)' }
                 }
               >
-                <Icon name="send" className="text-lg" />
+                <Icon name="send" className="text-lg text-inherit" />
               </button>
             </div>
           </div>
