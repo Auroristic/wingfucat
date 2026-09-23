@@ -25,13 +25,14 @@ describe('Header Component', () => {
     vi.clearAllMocks();
   });
 
-  it('renders partner info and avatar fallback without false online indicator', () => {
+  it('renders partner info as offline when partner has no recent last_seen', () => {
     render(
       <Header
         partner={{
           id: 'partner-1',
           username: 'sweetheart',
           display_name: 'Sweetheart',
+          last_seen: '2020-01-01T00:00:00.000Z',
         }}
         isConnected={true}
       />
@@ -40,9 +41,9 @@ describe('Header Component', () => {
     // Partner name should be visible
     expect(screen.getByText('Sweetheart')).toBeInTheDocument();
 
-    // No misleading online connection indicator
-    expect(screen.queryByTestId('connection-indicator')).toBeNull();
-    expect(screen.queryByText('Online')).toBeNull();
+    // No online dot, text is Offline
+    expect(screen.queryByTestId('partner-online-indicator')).toBeNull();
+    expect(screen.getByText('Offline')).toBeInTheDocument();
 
     // Logout and archive buttons exist with correct icons
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
@@ -50,6 +51,23 @@ describe('Header Component', () => {
 
     expect(screen.getByRole('button', { name: /archive/i })).toBeInTheDocument();
     expect(screen.getByText('archive')).toHaveClass('material-symbols-rounded');
+  });
+
+  it('renders green indicator and Online status when partner is verified online', () => {
+    render(
+      <Header
+        partner={{
+          id: 'partner-1',
+          username: 'sweetheart',
+          display_name: 'Sweetheart',
+          last_seen: new Date().toISOString(),
+        }}
+        isConnected={true}
+      />
+    );
+
+    expect(screen.getByTestId('partner-online-indicator')).toBeInTheDocument();
+    expect(screen.getByText('Online')).toBeInTheDocument();
   });
 
   it('renders offline connection indicator when isConnected is false', () => {

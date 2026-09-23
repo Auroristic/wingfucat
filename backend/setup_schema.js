@@ -46,6 +46,13 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
         max: 100,
       });
     }
+    if (!existingUserFields.has('last_seen')) {
+      usersCollection.fields.push({
+        name: 'last_seen',
+        type: 'date',
+        required: false,
+      });
+    }
     usersCollection.indexes = usersCollection.indexes || [];
     if (!usersCollection.indexes.some(i => i.includes('username'))) {
       usersCollection.indexes.push('CREATE UNIQUE INDEX idx_users_username ON users (username) WHERE username != ""');
@@ -60,6 +67,13 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
         name: 'display_name',
         type: 'text',
         options: { max: 100 },
+      });
+    }
+    if (!existingUserFields.has('last_seen')) {
+      usersCollection.schema.push({
+        name: 'last_seen',
+        type: 'date',
+        required: false,
       });
     }
   }
@@ -141,6 +155,18 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
       type: 'date',
       required: false,
     },
+    {
+      name: 'created',
+      type: 'autodate',
+      onCreate: true,
+      onUpdate: false,
+    },
+    {
+      name: 'updated',
+      type: 'autodate',
+      onCreate: true,
+      onUpdate: true,
+    },
   ];
 
   try {
@@ -178,6 +204,18 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
       required: false,
       options: { max: 100 },
       max: 100,
+    },
+    {
+      name: 'created',
+      type: 'autodate',
+      onCreate: true,
+      onUpdate: false,
+    },
+    {
+      name: 'updated',
+      type: 'autodate',
+      onCreate: true,
+      onUpdate: true,
     },
   ];
 

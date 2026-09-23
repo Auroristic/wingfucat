@@ -1,7 +1,7 @@
 {
   "short_name": "wingfucat",
-  "name": "wingfucat - Private Couple Chat",
-  "description": "Minimal private couple chat web application",
+  "name": "wingfucat",
+  "description": "Minimal private chat web application",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

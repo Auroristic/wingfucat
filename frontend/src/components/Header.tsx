@@ -8,6 +8,7 @@ export interface PartnerInfo {
   display_name?: string;
   username?: string;
   avatar?: string;
+  last_seen?: string;
   [key: string]: any;
 }
 
@@ -23,6 +24,7 @@ export interface HeaderProps {
   partner?: PartnerInfo | null;
   currentUser?: CurrentUserInfo | null;
   isConnected?: boolean;
+  isPartnerOnline?: boolean;
   archivedAt?: string | null;
   onArchive?: () => void | Promise<void>;
   onOpenArchive?: () => void;
@@ -34,6 +36,7 @@ export function Header({
   partner,
   currentUser: propCurrentUser,
   isConnected = true,
+  isPartnerOnline,
   archivedAt,
   onArchive,
   onOpenArchive,
@@ -94,14 +97,22 @@ export function Header({
         : `${pb.baseUrl || ''}/api/files/users/${partner.id}/${partner.avatar}`)
     : null;
 
+  // Check if partner is online (last_seen within 45s)
+  const isOnline = isPartnerOnline !== undefined
+    ? isPartnerOnline
+    : Boolean(
+        partner?.last_seen &&
+        Date.now() - new Date(partner.last_seen).getTime() < 45000
+      );
+
   return (
     <>
       <header
         className={`flex h-14 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 select-none ${className}`}
       >
-        {/* Left: Partner info & Network status */}
+        {/* Left: Partner info & Online status */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center">
+          <div className="relative flex items-center justify-center">
             {partnerAvatarUrl ? (
               <img
                 src={partnerAvatarUrl}
@@ -113,19 +124,34 @@ export function Header({
                 {partnerInitial}
               </div>
             )}
+            {/* Green indicator dot only when partner is verified online */}
+            {isOnline && (
+              <span
+                data-testid="partner-online-indicator"
+                title="Online"
+                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-zinc-950 bg-emerald-500"
+              />
+            )}
           </div>
 
           <div className="flex flex-col leading-tight">
             <span className="text-xs font-semibold text-white tracking-tight truncate max-w-[120px] sm:max-w-[180px]">
               {partnerName}
             </span>
-            {!isConnected && (
+            {!isConnected ? (
               <span
                 data-testid="connection-indicator"
                 className="flex items-center gap-1 text-[10px] text-amber-400 font-medium"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                 Offline
+              </span>
+            ) : (
+              <span
+                data-testid="partner-status"
+                className={`text-[10px] ${isOnline ? 'text-zinc-400' : 'text-zinc-500'}`}
+              >
+                {isOnline ? 'Online' : 'Offline'}
               </span>
             )}
           </div>

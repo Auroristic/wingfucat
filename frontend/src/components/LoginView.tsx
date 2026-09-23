@@ -32,7 +32,6 @@ export function LoginView() {
             <Icon name="lock" className="text-2xl text-white" />
           </div>
           <h1 className="text-xl font-semibold tracking-wide text-white">wingfucat</h1>
-          <p className="text-xs text-zinc-400">Private Couple Chat</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

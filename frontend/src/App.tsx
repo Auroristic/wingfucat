@@ -34,6 +34,56 @@ function AuthenticatedApp() {
     };
   }, []);
 
+  // Periodic tick to re-evaluate partner online status smoothly
+  const [, setPresenceTick] = useState<number>(0);
+  useEffect(() => {
+    const timer = setInterval(() => setPresenceTick((t) => t + 1), 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // User presence heartbeat (updates last_seen on users collection)
+  useEffect(() => {
+    if (!user) return;
+
+    const sendHeartbeat = async (isOffline = false) => {
+      try {
+        const timestamp = isOffline
+          ? new Date(Date.now() - 60000).toISOString()
+          : new Date().toISOString();
+        await pb.collection('users').update(user.id, { last_seen: timestamp });
+      } catch (_) {}
+    };
+
+    sendHeartbeat(false);
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        sendHeartbeat(false);
+      }
+    }, 20000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        sendHeartbeat(false);
+      } else {
+        sendHeartbeat(true);
+      }
+    };
+
+    const handleUnload = () => {
+      sendHeartbeat(true);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [user]);
+
   // Fetch partner info and chat_settings
   useEffect(() => {
     if (!user) return;
@@ -68,6 +118,18 @@ function AuthenticatedApp() {
     fetchPartner();
     fetchSettings();
 
+    // Subscribe to partner user record changes for real-time presence
+    let unsubUsersPromise: Promise<any> | null = null;
+    try {
+      unsubUsersPromise = pb.collection('users').subscribe<PartnerInfo>('*', (e) => {
+        if (!isMounted) return;
+        if (e.action === 'update' && e.record.id !== user.id) {
+          setPartner(e.record);
+        }
+      });
+      unsubUsersPromise.catch(() => {});
+    } catch (_) {}
+
     // Subscribe to chat_settings realtime changes
     let unsubPromise: Promise<any> | null = null;
     try {
@@ -83,6 +145,7 @@ function AuthenticatedApp() {
 
     return () => {
       isMounted = false;
+      pb.collection('users').unsubscribe('*').catch(() => {});
       pb.collection('chat_settings').unsubscribe('*').catch(() => {});
     };
   }, [user]);
@@ -134,6 +197,11 @@ function AuthenticatedApp() {
     return <LoginView />;
   }
 
+  const isPartnerOnline = Boolean(
+    partner?.last_seen &&
+    Date.now() - new Date(partner.last_seen).getTime() < 45000
+  );
+
   return (
     <div className="flex h-dvh flex-col bg-black text-white">
       {/* Persistent Top Header */}
@@ -141,6 +209,7 @@ function AuthenticatedApp() {
         partner={partner}
         currentUser={user}
         isConnected={isConnected}
+        isPartnerOnline={isPartnerOnline}
         archivedAt={archivedAt}
         onArchive={handleArchive}
         onOpenArchive={() => setIsArchiveModalOpen(true)}
