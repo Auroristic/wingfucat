@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { LoginView } from './components/LoginView';
 import { LiveMessageThread } from './components/MessageThread';
 import { MessageComposer } from './components/MessageComposer';
 import { Header, type PartnerInfo } from './components/Header';
 import { ArchiveModal } from './components/ArchiveModal';
+import { ThemeSettingsModal } from './components/ThemeSettingsModal';
 import { pb } from './lib/pocketbase';
 import { parseDate, toPocketBaseDate } from './utils/date';
 
@@ -15,6 +17,7 @@ function AuthenticatedApp() {
   const [chatSettingsRecordId, setChatSettingsRecordId] = useState<string | null>(null);
   const [archivedAt, setArchivedAt] = useState<string | null>(null);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState<boolean>(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [isPartnerTypingExpired, setIsPartnerTypingExpired] = useState<boolean>(false);
 
@@ -332,6 +335,7 @@ function AuthenticatedApp() {
         archivedAt={archivedAt}
         onArchive={handleArchive}
         onOpenArchive={() => setIsArchiveModalOpen(true)}
+        onOpenThemeSettings={() => setIsThemeModalOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -362,6 +366,12 @@ function AuthenticatedApp() {
         onRestore={handleRestore}
         currentUserId={user.id}
       />
+
+      {/* Theme Customization Modal */}
+      <ThemeSettingsModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+      />
     </div>
   );
 }
@@ -369,7 +379,9 @@ function AuthenticatedApp() {
 export function App() {
   return (
     <AuthProvider>
-      <AuthenticatedApp />
+      <ThemeProvider>
+        <AuthenticatedApp />
+      </ThemeProvider>
     </AuthProvider>
   );
 }

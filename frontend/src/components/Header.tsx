@@ -33,6 +33,7 @@ export interface HeaderProps {
   archivedAt?: string | null;
   onArchive?: () => void | Promise<void>;
   onOpenArchive?: () => void;
+  onOpenThemeSettings?: () => void;
   onLogout?: () => void;
   className?: string;
 }
@@ -46,6 +47,7 @@ export function Header({
   archivedAt,
   onArchive,
   onOpenArchive,
+  onOpenThemeSettings,
   onLogout,
   className = '',
 }: HeaderProps) {
@@ -204,6 +206,20 @@ export function Header({
             >
               <Icon name="archive" className="text-base" />
               <span className="hidden sm:inline">View Archive</span>
+            </button>
+          )}
+
+          {/* Theme Settings button */}
+          {onOpenThemeSettings && (
+            <button
+              type="button"
+              onClick={onOpenThemeSettings}
+              aria-label="Appearance & Themes"
+              title="Appearance & Themes"
+              className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:text-white transition-colors cursor-pointer"
+            >
+              <Icon name="palette" className="text-base" />
+              <span className="hidden sm:inline">Theme</span>
             </button>
           )}
 

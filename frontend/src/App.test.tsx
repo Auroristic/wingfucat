@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { App } from './App';
 import * as AuthModule from './context/AuthContext';
 import { pb } from './lib/pocketbase';
@@ -83,5 +83,32 @@ describe('App Root Component', () => {
 
     render(<App />);
     expect(updateSpy).toHaveBeenCalledWith('u-1', expect.objectContaining({ is_online: true }));
+  });
+
+  it('opens ThemeSettingsModal when Theme button is clicked', () => {
+    vi.spyOn(AuthModule, 'useAuth').mockReturnValue({
+      user: {
+        id: 'u-1',
+        collectionId: 'users',
+        collectionName: 'users',
+        email: 'alice@example.com',
+        username: 'alice',
+        display_name: 'Alice',
+        avatar: '',
+        created: '2026-09-22',
+        updated: '2026-09-22',
+      },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(<App />);
+    const themeBtn = screen.getByRole('button', { name: /appearance & themes/i });
+    expect(themeBtn).toBeInTheDocument();
+
+    expect(screen.queryByRole('dialog', { name: /appearance & themes/i })).toBeNull();
+    fireEvent.click(themeBtn);
+    expect(screen.getByRole('dialog', { name: /appearance & themes/i })).toBeInTheDocument();
   });
 });

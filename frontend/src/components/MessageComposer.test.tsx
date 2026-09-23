@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MessageComposer } from './MessageComposer';
+import { ThemeProvider } from '../context/ThemeContext';
 import { pb } from '../lib/pocketbase';
 
 // Mock PocketBase
@@ -143,5 +144,47 @@ describe('MessageComposer Component', () => {
     render(<MessageComposer isPartnerTyping={false} partnerName="wingfu" />);
 
     expect(screen.queryByTestId('partner-typing-indicator')).toBeNull();
+  });
+
+  it('renders all typing animation variants and applies bubbly-press on pink-cloud', () => {
+    // 1. hearts + pink-cloud
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'pink-cloud', typingAnimation: 'hearts' }));
+    const { unmount: unmount1 } = render(
+      <ThemeProvider>
+        <MessageComposer isPartnerTyping={true} partnerName="wingfu" />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId('typing-hearts')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /send message/i })).toHaveClass('bubbly-press');
+    unmount1();
+
+    // 2. neon-pulse
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'cyberpunk', typingAnimation: 'neon-pulse' }));
+    const { unmount: unmount2 } = render(
+      <ThemeProvider>
+        <MessageComposer isPartnerTyping={true} partnerName="wingfu" />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId('typing-neon-pulse')).toBeInTheDocument();
+    unmount2();
+
+    // 3. glow-bar
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'futuristic', typingAnimation: 'glow-bar' }));
+    const { unmount: unmount3 } = render(
+      <ThemeProvider>
+        <MessageComposer isPartnerTyping={true} partnerName="wingfu" />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId('typing-glow-bar')).toBeInTheDocument();
+    unmount3();
+
+    // 4. dots
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'minimalist-oled', typingAnimation: 'dots' }));
+    render(
+      <ThemeProvider>
+        <MessageComposer isPartnerTyping={true} partnerName="wingfu" />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId('typing-dots')).toBeInTheDocument();
   });
 });

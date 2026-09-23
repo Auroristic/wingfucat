@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MessageBubble, formatMessageTime } from './MessageBubble';
+import { ThemeProvider } from '../context/ThemeContext';
 import type { Message } from './MessageBubble';
 
 describe('MessageBubble Component', () => {
@@ -132,6 +133,38 @@ describe('MessageBubble Component', () => {
     expect(screen.getByText('0:18')).toBeInTheDocument();
     const playIcon = screen.getByText('play_arrow');
     expect(playIcon).toBeInTheDocument();
+  });
+
+  it('applies pink-cloud bounce and soft-cloud styling when wrapped in ThemeProvider with pink-cloud', () => {
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'pink-cloud', bubbleStyle: 'soft-cloud' }));
+    render(
+      <ThemeProvider>
+        <MessageBubble message={baseMessage} isSelf={false} />
+      </ThemeProvider>
+    );
+
+    const bubble = screen.getByTestId('message-bubble');
+    expect(bubble).toHaveClass('animate-pink-bounce');
+    expect(bubble).toHaveClass('rounded-3xl');
+  });
+
+  it('applies sharp and glass styles correctly', () => {
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'cyberpunk', bubbleStyle: 'sharp' }));
+    const { unmount } = render(
+      <ThemeProvider>
+        <MessageBubble message={baseMessage} isSelf={false} />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId('message-bubble')).toHaveClass('rounded-none');
+    unmount();
+
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'futuristic', bubbleStyle: 'glass' }));
+    render(
+      <ThemeProvider>
+        <MessageBubble message={baseMessage} isSelf={false} />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId('message-bubble')).toHaveClass('backdrop-blur-md');
   });
 });
 

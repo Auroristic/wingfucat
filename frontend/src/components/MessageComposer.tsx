@@ -3,6 +3,7 @@ import { Icon } from './Icon';
 import { VoiceRecorder } from './VoiceRecorder';
 import { compressImage } from '../utils/imageCompressor';
 import { pb } from '../lib/pocketbase';
+import { useTheme } from '../context/ThemeContext';
 import type { Message } from './MessageBubble';
 
 export interface MessageComposerProps {
@@ -173,23 +174,61 @@ export function MessageComposer({
     }
   };
 
+  const { theme } = useTheme();
+
   return (
     <div
       data-testid="message-composer"
       className={`border-t border-zinc-800 bg-zinc-950 px-3 pt-1.5 pb-3 ${className}`}
     >
-      {/* Discord-style typing indicator */}
+      {/* Themed typing indicator */}
       <div className="h-5 px-1 flex items-center text-xs text-zinc-400 select-none overflow-hidden">
         {isPartnerTyping && (
           <div
             data-testid="partner-typing-indicator"
+            data-typing-variant={theme.typingAnimation}
             className="flex items-center gap-1.5"
           >
-            <span className="flex items-center gap-0.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.32s]" />
-              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.16s]" />
-              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce" />
-            </span>
+            {theme.typingAnimation === 'dots' && (
+              <span className="flex items-center gap-0.5" data-testid="typing-dots">
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.32s]"
+                  style={{ backgroundColor: 'var(--theme-accent)' }}
+                />
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.16s]"
+                  style={{ backgroundColor: 'var(--theme-accent)' }}
+                />
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce"
+                  style={{ backgroundColor: 'var(--theme-accent)' }}
+                />
+              </span>
+            )}
+            {theme.typingAnimation === 'hearts' && (
+              <span className="flex items-center gap-1 text-xs text-rose-300" data-testid="typing-hearts">
+                <span className="animate-heart-beat text-xs">♥</span>
+                <span className="animate-heart-beat [animation-delay:0.2s] text-xs">♥</span>
+                <span className="animate-heart-beat [animation-delay:0.4s] text-xs">♥</span>
+              </span>
+            )}
+            {theme.typingAnimation === 'neon-pulse' && (
+              <span className="flex items-center gap-1" data-testid="typing-neon-pulse">
+                <span className="h-1.5 w-1.5 rounded-sm bg-[#00f0ff] animate-ping" />
+                <span className="h-1.5 w-1.5 rounded-sm bg-[#ff003c] animate-pulse" />
+              </span>
+            )}
+            {theme.typingAnimation === 'glow-bar' && (
+              <div className="relative h-1 w-16 overflow-hidden rounded-full bg-zinc-800" data-testid="typing-glow-bar">
+                <div
+                  className="absolute inset-y-0 w-6 rounded-full animate-sweep-glow"
+                  style={{
+                    background: 'linear-gradient(90deg, #4f7cff, #a855f7)',
+                    boxShadow: '0 0 8px #a855f7',
+                  }}
+                />
+              </div>
+            )}
             <span className="truncate">
               <strong className="font-semibold text-zinc-200">{partnerName}</strong> is typing...
             </span>
@@ -283,7 +322,14 @@ export function MessageComposer({
               onClick={handleSend}
               disabled={isUploading || (!text.trim() && !selectedImage)}
               aria-label="Send message"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 hover:bg-white transition-colors cursor-pointer disabled:opacity-40 disabled:hover:bg-zinc-100"
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 hover:bg-white transition-colors cursor-pointer disabled:opacity-40 disabled:hover:bg-zinc-100 ${
+                theme.id === 'pink-cloud' ? 'bubbly-press' : ''
+              }`}
+              style={
+                theme.id === 'pink-cloud'
+                  ? { backgroundColor: 'var(--theme-accent)', color: '#1a1017' }
+                  : undefined
+              }
             >
               <Icon name="send" className="text-lg" />
             </button>
