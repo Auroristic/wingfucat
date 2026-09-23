@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginView } from './components/LoginView';
 import { LiveMessageThread } from './components/MessageThread';
@@ -15,6 +15,11 @@ function AuthenticatedApp() {
   const [archivedAt, setArchivedAt] = useState<string | null>(null);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(true);
+  const [isPartnerTypingExpired, setIsPartnerTypingExpired] = useState<boolean>(false);
+
+  // Local timestamp when partner update/heartbeat was last received on this device
+  const partnerLastReceivedRef = useRef<number>(0);
+  const typingTimeoutRef = useRef<any>(null);
 
   // Monitor network connectivity
   useEffect(() => {
@@ -35,14 +40,14 @@ function AuthenticatedApp() {
     };
   }, []);
 
-  // Periodic tick every 5s to re-evaluate partner online & typing status smoothly
+  // Periodic tick every 4s to re-evaluate partner online & typing status smoothly
   const [, setPresenceTick] = useState<number>(0);
   useEffect(() => {
-    const timer = setInterval(() => setPresenceTick((t) => t + 1), 5000);
+    const timer = setInterval(() => setPresenceTick((t) => t + 1), 4000);
     return () => clearInterval(timer);
   }, []);
 
-  // User presence heartbeat (updates last_seen on users collection)
+  // User presence heartbeat (updates is_online and last_seen on users collection)
   useEffect(() => {
     if (!user) return;
 
@@ -52,8 +57,9 @@ function AuthenticatedApp() {
       try {
         const timestamp = isActive ? new Date().toISOString() : '';
         await pb.collection('users').update(user.id, {
+          is_online: isActive,
           last_seen: timestamp,
-          ...(isActive ? {} : { typing_until: '' }),
+          ...(isActive ? {} : { is_typing: false, typing_until: '' }),
         });
       } catch (_) {}
     };
@@ -93,21 +99,55 @@ function AuthenticatedApp() {
     };
   }, [user]);
 
-  // Handle typing state broadcast
+  // Handle typing state broadcast with sender-side auto-reset
   const handleTyping = useCallback(
     async (isTyping: boolean) => {
       if (!user) return;
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+
       try {
-        const typingTimestamp = isTyping
-          ? new Date(Date.now() + 4000).toISOString()
-          : '';
-        await pb.collection('users').update(user.id, {
-          typing_until: typingTimestamp,
-        });
+        if (isTyping) {
+          await pb.collection('users').update(user.id, {
+            is_typing: true,
+            typing_until: new Date(Date.now() + 4000).toISOString(),
+          });
+
+          // Automatically clear typing state after 3.5s of typing inactivity
+          typingTimeoutRef.current = setTimeout(async () => {
+            try {
+              await pb.collection('users').update(user.id, {
+                is_typing: false,
+                typing_until: '',
+              });
+            } catch (_) {}
+          }, 3500);
+        } else {
+          await pb.collection('users').update(user.id, {
+            is_typing: false,
+            typing_until: '',
+          });
+        }
       } catch (_) {}
     },
     [user]
   );
+
+  // Receiver safety timer: auto-clear partner typing after 4.5s if not refreshed
+  useEffect(() => {
+    if (partner?.is_typing) {
+      setIsPartnerTypingExpired(false);
+      const timer = setTimeout(() => {
+        setIsPartnerTypingExpired(true);
+      }, 4500);
+      return () => clearTimeout(timer);
+    } else {
+      setIsPartnerTypingExpired(false);
+    }
+  }, [partner?.is_typing, partner?.updated]);
 
   // Fetch partner info and chat_settings
   useEffect(() => {
@@ -120,6 +160,12 @@ function AuthenticatedApp() {
         const users = await pb.collection('users').getFullList<PartnerInfo>();
         const partnerUser = users.find((u) => u.id !== user.id);
         if (isMounted && partnerUser) {
+          const lastSeenMs = parseDate(partnerUser.last_seen);
+          if (lastSeenMs > 0 && Math.abs(Date.now() - lastSeenMs) < 60000) {
+            partnerLastReceivedRef.current = Date.now();
+          } else {
+            partnerLastReceivedRef.current = 0;
+          }
           setPartner(partnerUser);
         }
       } catch (_) {
@@ -149,6 +195,7 @@ function AuthenticatedApp() {
       unsubUsersPromise = pb.collection('users').subscribe<PartnerInfo>('*', (e) => {
         if (!isMounted) return;
         if (e.action === 'update' && e.record.id !== user.id) {
+          partnerLastReceivedRef.current = Date.now();
           setPartner(e.record);
         }
       });
@@ -218,15 +265,44 @@ function AuthenticatedApp() {
     }
   }, [chatSettingsRecordId]);
 
+  const handleLogout = useCallback(async () => {
+    if (user) {
+      try {
+        await pb.collection('users').update(user.id, {
+          is_online: false,
+          is_typing: false,
+          typing_until: '',
+        });
+      } catch (_) {}
+    }
+    logout();
+  }, [user, logout]);
+
   if (!user) {
     return <LoginView />;
   }
 
-  const lastSeenMs = parseDate(partner?.last_seen);
-  const isPartnerOnline = Boolean(lastSeenMs > 0 && Date.now() - lastSeenMs < 25000);
+  const isPartnerOnline = (() => {
+    if (!partner) return false;
+    if (partner.is_online === false) return false;
+    if (partner.is_online === true) {
+      if (partnerLastReceivedRef.current > 0 && Date.now() - partnerLastReceivedRef.current < 40000) {
+        return true;
+      }
+      const lastSeenMs = parseDate(partner.last_seen);
+      if (lastSeenMs > 0 && Math.abs(Date.now() - lastSeenMs) < 60000) {
+        return true;
+      }
+      return false;
+    }
+    const lastSeenMs = parseDate(partner.last_seen);
+    return Boolean(lastSeenMs > 0 && Date.now() - lastSeenMs < 25000);
+  })();
 
   const typingUntilMs = parseDate(partner?.typing_until);
-  const isPartnerTyping = Boolean(typingUntilMs > 0 && typingUntilMs > Date.now());
+  const isPartnerTyping = partner?.is_typing !== undefined
+    ? Boolean(partner.is_typing && !isPartnerTypingExpired)
+    : Boolean(typingUntilMs > 0 && typingUntilMs > Date.now());
 
   return (
     <div className="flex h-dvh flex-col bg-black text-white">
@@ -240,7 +316,7 @@ function AuthenticatedApp() {
         archivedAt={archivedAt}
         onArchive={handleArchive}
         onOpenArchive={() => setIsArchiveModalOpen(true)}
-        onLogout={logout}
+        onLogout={handleLogout}
       />
 
       {/* Main chat thread */}

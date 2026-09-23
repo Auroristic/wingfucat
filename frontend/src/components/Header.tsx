@@ -11,6 +11,8 @@ export interface PartnerInfo {
   avatar?: string;
   last_seen?: string;
   typing_until?: string;
+  is_online?: boolean;
+  is_typing?: boolean;
   [key: string]: any;
 }
 
@@ -101,17 +103,21 @@ export function Header({
         : `${pb.baseUrl || ''}/api/files/users/${partner.id}/${partner.avatar}`)
     : null;
 
-  // Check if partner is online (last_seen within 25s)
+  // Check if partner is online
   const lastSeenMs = parseDate(partner?.last_seen);
   const isOnline = isPartnerOnline !== undefined
     ? isPartnerOnline
-    : Boolean(lastSeenMs > 0 && Date.now() - lastSeenMs < 25000);
+    : (partner?.is_online !== undefined
+        ? Boolean(partner.is_online)
+        : Boolean(lastSeenMs > 0 && Date.now() - lastSeenMs < 25000));
 
-  // Check if partner is typing (typing_until is in the future)
+  // Check if partner is typing
   const typingUntilMs = parseDate(partner?.typing_until);
   const isTyping = isPartnerTyping !== undefined
     ? isPartnerTyping
-    : Boolean(typingUntilMs > 0 && typingUntilMs > Date.now());
+    : (partner?.is_typing !== undefined
+        ? Boolean(partner.is_typing)
+        : Boolean(typingUntilMs > 0 && typingUntilMs > Date.now()));
 
   return (
     <>

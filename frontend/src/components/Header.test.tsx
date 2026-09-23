@@ -179,6 +179,42 @@ describe('Header Component', () => {
     fireEvent.click(viewArchiveButton);
     expect(mockOpenArchive).toHaveBeenCalledTimes(1);
   });
+
+  it('respects partner.is_online boolean directly without depending on timestamps', () => {
+    // Partner has an old last_seen (e.g. clock skew) but is_online is true
+    render(
+      <Header
+        partner={{
+          id: 'partner-1',
+          username: 'sweetheart',
+          display_name: 'Sweetheart',
+          last_seen: '2020-01-01T00:00:00.000Z',
+          is_online: true,
+        }}
+        isConnected={true}
+      />
+    );
+
+    expect(screen.getByTestId('partner-online-indicator')).toBeInTheDocument();
+    expect(screen.getByText('Online')).toBeInTheDocument();
+  });
+
+  it('respects partner.is_typing boolean directly without depending on timestamps', () => {
+    render(
+      <Header
+        partner={{
+          id: 'partner-1',
+          username: 'sweetheart',
+          display_name: 'Sweetheart',
+          is_typing: true,
+        }}
+        isConnected={true}
+      />
+    );
+
+    expect(screen.getByTestId('partner-typing')).toBeInTheDocument();
+    expect(screen.getByText('typing...')).toBeInTheDocument();
+  });
 });
 
 describe('ArchiveModal Component', () => {
