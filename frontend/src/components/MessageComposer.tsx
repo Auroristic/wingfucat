@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Icon } from './Icon';
 import { VoiceRecorder } from './VoiceRecorder';
 import { compressImage } from '../utils/imageCompressor';
@@ -39,6 +39,14 @@ export function MessageComposer({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  }, [imagePreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
   }, [imagePreviewUrl]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,6 +141,7 @@ export function MessageComposer({
       setIsRecordingAudio(false);
       onMessageSent?.(created);
     } catch (err: any) {
+      setIsRecordingAudio(false);
       setErrorMessage(err?.message || 'Failed to send voice note');
     } finally {
       setIsUploading(false);

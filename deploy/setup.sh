@@ -202,6 +202,10 @@ if [[ -n "${AUTH_TOKEN}" ]]; then
 
     # Run schema and seed if node is installed and scripts are available
     if command -v node >/dev/null 2>&1; then
+        if [[ -f "${PROJECT_DIR}/backend/package.json" ]] && command -v npm >/dev/null 2>&1; then
+            log "Installing backend dependencies..."
+            (cd "${PROJECT_DIR}/backend" && npm install --omit=dev) || true
+        fi
         if [[ -f "${PROJECT_DIR}/backend/setup_schema.js" ]]; then
             log "Configuring collections and security rules..."
             ADMIN_EMAIL="${ADMIN_EMAIL}" ADMIN_PASSWORD="${ADMIN_PASSWORD}" PB_URL="http://127.0.0.1:8090" \

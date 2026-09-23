@@ -27,11 +27,24 @@ export function MessageThread({
 
   const currentUserId = propCurrentUserId ?? authUserId;
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const prevCountRef = useRef(messages?.length ?? 0);
 
-  // Auto-scroll to bottom when messages list changes
+  // Auto-scroll to bottom only when a new message is appended or user is near bottom
   useEffect(() => {
-    if (bottomRef.current && typeof bottomRef.current.scrollIntoView === 'function') {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    const prevCount = prevCountRef.current;
+    const currentCount = messages?.length ?? 0;
+    prevCountRef.current = currentCount;
+
+    const container = containerRef.current;
+    const isNearBottom = container
+      ? container.scrollHeight - container.scrollTop - container.clientHeight < 120
+      : true;
+
+    if (currentCount > prevCount || isNearBottom) {
+      if (bottomRef.current && typeof bottomRef.current.scrollIntoView === 'function') {
+        bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   }, [messages]);
 
@@ -53,6 +66,7 @@ export function MessageThread({
 
   return (
     <div
+      ref={containerRef}
       data-testid="message-thread"
       className={`flex-1 overflow-y-auto p-4 space-y-3 ${className}`}
     >

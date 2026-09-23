@@ -122,6 +122,7 @@ export function AudioPlayer({
           type="range"
           min={0}
           max={totalDuration > 0 ? totalDuration : 100}
+          step="0.1"
           value={currentTime}
           onChange={handleSeek}
           aria-label="Audio progress"

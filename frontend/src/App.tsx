@@ -103,10 +103,10 @@ function AuthenticatedApp() {
           });
         }
       }
+      setArchivedAt(nowIso);
     } catch (err) {
       console.error('Failed to archive chat:', err);
     }
-    setArchivedAt(nowIso);
   }, [chatSettingsRecordId]);
 
   const handleRestore = useCallback(async () => {
@@ -124,10 +124,10 @@ function AuthenticatedApp() {
           });
         }
       }
+      setArchivedAt('');
     } catch (err) {
       console.error('Failed to restore chat:', err);
     }
-    setArchivedAt('');
   }, [chatSettingsRecordId]);
 
   if (!user) {

@@ -60,15 +60,15 @@ fi
 
 case "${SYNC_TOOL}" in
     rsync)
-        RSYNC_SSH_OPTS="ssh -p ${SSH_PORT}"
+        RSYNC_SSH_OPTS="ssh -o BatchMode=yes -p ${SSH_PORT}"
         if [[ -n "${SSH_KEY}" ]]; then
-            RSYNC_SSH_OPTS="ssh -i ${SSH_KEY} -p ${SSH_PORT}"
+            RSYNC_SSH_OPTS="ssh -o BatchMode=yes -i ${SSH_KEY} -p ${SSH_PORT}"
         fi
 
         rsync -avz --partial -e "${RSYNC_SSH_OPTS}" "${LATEST_BACKUP}" "${REMOTE_TARGET}"
         ;;
     scp)
-        SCP_OPTS=(-P "${SSH_PORT}" -p)
+        SCP_OPTS=(-o BatchMode=yes -P "${SSH_PORT}" -p)
         if [[ -n "${SSH_KEY}" ]]; then
             SCP_OPTS+=(-i "${SSH_KEY}")
         fi

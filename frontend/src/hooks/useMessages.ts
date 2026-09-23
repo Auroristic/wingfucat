@@ -68,8 +68,13 @@ export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
 
       const unreadPartnerMsgs = msgs.filter((m) => m.sender !== uid && !m.read_at);
-      for (const msg of unreadPartnerMsgs) {
-        markAsRead(msg.id);
+      if (unreadPartnerMsgs.length > 0) {
+        // Process sequentially to avoid concurrent burst fan-out and render churn
+        (async () => {
+          for (const msg of unreadPartnerMsgs) {
+            await markAsRead(msg.id);
+          }
+        })();
       }
     },
     [autoMarkRead, markAsRead]
