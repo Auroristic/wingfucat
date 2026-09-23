@@ -10,6 +10,7 @@ import { parseDate, toPocketBaseDate } from './utils/date';
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
+  const userId = user?.id;
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
   const [chatSettingsRecordId, setChatSettingsRecordId] = useState<string | null>(null);
   const [archivedAt, setArchivedAt] = useState<string | null>(null);
@@ -49,14 +50,14 @@ function AuthenticatedApp() {
 
   // User presence heartbeat (updates is_online and last_seen on users collection)
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     let heartbeatTimer: any = null;
 
     const sendHeartbeat = async (isActive = true) => {
       try {
         const timestamp = isActive ? new Date().toISOString() : '';
-        await pb.collection('users').update(user.id, {
+        await pb.collection('users').update(userId, {
           is_online: isActive,
           last_seen: timestamp,
           ...(isActive ? {} : { is_typing: false, typing_until: '' }),
@@ -74,15 +75,29 @@ function AuthenticatedApp() {
       }
     }, 12000);
 
+    let visibilityOfflineTimer: any = null;
+
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
+        if (visibilityOfflineTimer) {
+          clearTimeout(visibilityOfflineTimer);
+          visibilityOfflineTimer = null;
+        }
         sendHeartbeat(true);
       } else {
-        sendHeartbeat(false);
+        if (visibilityOfflineTimer) {
+          clearTimeout(visibilityOfflineTimer);
+        }
+        visibilityOfflineTimer = setTimeout(() => {
+          sendHeartbeat(false);
+        }, 3000);
       }
     };
 
     const handlePageHide = () => {
+      if (visibilityOfflineTimer) {
+        clearTimeout(visibilityOfflineTimer);
+      }
       sendHeartbeat(false);
     };
 
@@ -92,17 +107,19 @@ function AuthenticatedApp() {
 
     return () => {
       clearInterval(heartbeatTimer);
+      if (visibilityOfflineTimer) {
+        clearTimeout(visibilityOfflineTimer);
+      }
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('beforeunload', handlePageHide);
-      sendHeartbeat(false);
     };
-  }, [user]);
+  }, [userId]);
 
   // Handle typing state broadcast with sender-side auto-reset
   const handleTyping = useCallback(
     async (isTyping: boolean) => {
-      if (!user) return;
+      if (!userId) return;
 
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -111,7 +128,7 @@ function AuthenticatedApp() {
 
       try {
         if (isTyping) {
-          await pb.collection('users').update(user.id, {
+          await pb.collection('users').update(userId, {
             is_typing: true,
             typing_until: new Date(Date.now() + 4000).toISOString(),
           });
@@ -119,21 +136,21 @@ function AuthenticatedApp() {
           // Automatically clear typing state after 3.5s of typing inactivity
           typingTimeoutRef.current = setTimeout(async () => {
             try {
-              await pb.collection('users').update(user.id, {
+              await pb.collection('users').update(userId, {
                 is_typing: false,
                 typing_until: '',
               });
             } catch (_) {}
           }, 3500);
         } else {
-          await pb.collection('users').update(user.id, {
+          await pb.collection('users').update(userId, {
             is_typing: false,
             typing_until: '',
           });
         }
       } catch (_) {}
     },
-    [user]
+    [userId]
   );
 
   // Receiver safety timer: auto-clear partner typing after 4.5s if not refreshed
@@ -151,17 +168,16 @@ function AuthenticatedApp() {
 
   // Fetch partner info and chat_settings
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     let isMounted = true;
 
     // Fetch partner (other user in users collection)
     const fetchPartner = async () => {
       try {
         const users = await pb.collection('users').getFullList<PartnerInfo>();
-        const partnerUser = users.find((u) => u.id !== user.id);
+        const partnerUser = users.find((u) => u.id !== userId);
         if (isMounted && partnerUser) {
-          const lastSeenMs = parseDate(partnerUser.last_seen);
-          if (lastSeenMs > 0 && Math.abs(Date.now() - lastSeenMs) < 60000) {
+          if (partnerUser.is_online) {
             partnerLastReceivedRef.current = Date.now();
           } else {
             partnerLastReceivedRef.current = 0;
@@ -194,8 +210,12 @@ function AuthenticatedApp() {
     try {
       unsubUsersPromise = pb.collection('users').subscribe<PartnerInfo>('*', (e) => {
         if (!isMounted) return;
-        if (e.action === 'update' && e.record.id !== user.id) {
-          partnerLastReceivedRef.current = Date.now();
+        if (e.action === 'update' && e.record.id !== userId) {
+          if (e.record.is_online) {
+            partnerLastReceivedRef.current = Date.now();
+          } else {
+            partnerLastReceivedRef.current = 0;
+          }
           setPartner(e.record);
         }
       });
@@ -220,7 +240,7 @@ function AuthenticatedApp() {
       pb.collection('users').unsubscribe('*').catch(() => {});
       pb.collection('chat_settings').unsubscribe('*').catch(() => {});
     };
-  }, [user]);
+  }, [userId]);
 
   const handleArchive = useCallback(async () => {
     const nowPbDate = toPocketBaseDate(new Date());
@@ -266,9 +286,9 @@ function AuthenticatedApp() {
   }, [chatSettingsRecordId]);
 
   const handleLogout = useCallback(async () => {
-    if (user) {
+    if (userId) {
       try {
-        await pb.collection('users').update(user.id, {
+        await pb.collection('users').update(userId, {
           is_online: false,
           is_typing: false,
           typing_until: '',
@@ -276,7 +296,7 @@ function AuthenticatedApp() {
       } catch (_) {}
     }
     logout();
-  }, [user, logout]);
+  }, [userId, logout]);
 
   if (!user) {
     return <LoginView />;
@@ -286,11 +306,7 @@ function AuthenticatedApp() {
     if (!partner) return false;
     if (partner.is_online === false) return false;
     if (partner.is_online === true) {
-      if (partnerLastReceivedRef.current > 0 && Date.now() - partnerLastReceivedRef.current < 40000) {
-        return true;
-      }
-      const lastSeenMs = parseDate(partner.last_seen);
-      if (lastSeenMs > 0 && Math.abs(Date.now() - lastSeenMs) < 60000) {
+      if (partnerLastReceivedRef.current > 0 && Date.now() - partnerLastReceivedRef.current < 45000) {
         return true;
       }
       return false;
