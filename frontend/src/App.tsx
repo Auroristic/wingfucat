@@ -342,7 +342,23 @@ function AuthenticatedApp() {
   const { theme } = useTheme();
 
   return (
-    <div className="relative flex h-dvh flex-col bg-black text-white overflow-hidden">
+    <div
+      className="relative flex h-dvh flex-col overflow-hidden transition-colors duration-200"
+      style={{
+        backgroundColor: 'var(--theme-bg-primary)',
+        color: 'var(--theme-text-primary)',
+      }}
+    >
+      {/* CRT Scanline Overlay for Terminal TUI with pointer-events: none and translateZ(0) */}
+      {theme.id === 'terminal-tui' && (
+        <div
+          data-testid="crt-scanlines-overlay"
+          aria-hidden="true"
+          className="crt-scanlines pointer-events-none fixed inset-0 z-20"
+          style={{ transform: 'translateZ(0)' }}
+        />
+      )}
+
       {/* Full-bleed wallpaper background */}
       {theme.wallpaperUrl && (
         <div

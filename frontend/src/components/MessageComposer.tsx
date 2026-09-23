@@ -286,18 +286,20 @@ export function MessageComposer({
             )}
 
             <div
-              className={`flex items-end gap-2 p-1.5 backdrop-blur-md transition-all duration-200 ${
-                theme.bubbleStyle === 'soft-cloud'
-                  ? 'rounded-3xl border shadow-lg'
+              className={`flex items-end gap-2 p-1.5 transition-all duration-200 ${
+                theme.id === 'terminal-tui'
+                  ? 'rounded-none border border-[#00ff41] bg-black shadow-[0_0_12px_rgba(0,255,65,0.25)]'
+                  : theme.id === 'daylight'
+                  ? 'rounded-2xl border border-zinc-200 bg-white/95 text-zinc-900 shadow-xs backdrop-blur-md'
+                  : theme.bubbleStyle === 'soft-cloud'
+                  ? 'rounded-3xl border shadow-lg glass-pane'
                   : theme.bubbleStyle === 'sharp'
-                  ? 'rounded-none border-2'
-                  : theme.bubbleStyle === 'glass'
-                  ? 'rounded-2xl border shadow-xl'
-                  : 'rounded-2xl border shadow-sm'
+                  ? 'rounded-none border-2 glass-pane'
+                  : 'rounded-2xl border glass-pane shadow-sm'
               }`}
               style={{
-                backgroundColor: 'var(--theme-bg-glass)',
-                borderColor: 'var(--theme-border-subtle)',
+                backgroundColor: theme.id === 'terminal-tui' ? '#000000' : 'var(--theme-bg-glass)',
+                borderColor: theme.id === 'terminal-tui' ? '#00ff41' : 'var(--theme-border-subtle)',
               }}
             >
               <input
@@ -313,7 +315,11 @@ export function MessageComposer({
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Attach image"
                 disabled={isUploading}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
+                className={`flex h-9 w-9 shrink-0 items-center justify-center transition-colors cursor-pointer disabled:opacity-40 ${
+                  theme.id === 'terminal-tui'
+                    ? 'rounded-none text-[#00ff41] hover:bg-[#00ff41]/20'
+                    : 'rounded-full text-zinc-400 hover:bg-white/10 hover:text-white'
+                }`}
               >
                 <Icon name="image" className="text-xl" />
               </button>
@@ -323,7 +329,11 @@ export function MessageComposer({
                 onClick={() => setIsRecordingAudio(true)}
                 aria-label="Record voice note"
                 disabled={isUploading}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
+                className={`flex h-9 w-9 shrink-0 items-center justify-center transition-colors cursor-pointer disabled:opacity-40 ${
+                  theme.id === 'terminal-tui'
+                    ? 'rounded-none text-[#00ff41] hover:bg-[#00ff41]/20'
+                    : 'rounded-full text-zinc-400 hover:bg-white/10 hover:text-white'
+                }`}
               >
                 <Icon name="mic" className="text-xl" />
               </button>
@@ -334,7 +344,15 @@ export function MessageComposer({
                 value={text}
                 onChange={handleTextChange}
                 onKeyDown={handleKeyDown}
-                placeholder={theme.id === 'pink-cloud' ? 'Send a sweet message... ✨' : 'Type a message...'}
+                placeholder={
+                  theme.id === 'pink-cloud'
+                    ? 'Send a sweet message... ✨'
+                    : theme.id === 'terminal-tui'
+                    ? 'guest@wingfu:~$ '
+                    : theme.id === 'daylight'
+                    ? 'Write a message...'
+                    : 'Type a message...'
+                }
                 disabled={isUploading}
                 className="flex-1 max-h-32 min-h-[36px] resize-none bg-transparent py-2 px-2 text-sm focus:outline-hidden leading-normal selection:bg-zinc-700"
                 style={{
@@ -347,13 +365,17 @@ export function MessageComposer({
                 onClick={handleSend}
                 disabled={isUploading || (!text.trim() && !selectedImage)}
                 aria-label="Send message"
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all cursor-pointer disabled:opacity-40 ${
-                  theme.id === 'pink-cloud'
-                    ? 'bubbly-press shadow-md text-zinc-950 font-bold'
-                    : 'bg-zinc-100 text-zinc-950 hover:bg-white'
+                className={`flex h-9 w-9 shrink-0 items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
+                  theme.id === 'terminal-tui'
+                    ? 'rounded-none border border-[#00ff41] bg-black text-[#00ff41] hover:bg-[#00ff41] hover:text-black font-mono font-bold'
+                    : theme.id === 'pink-cloud'
+                    ? 'rounded-full bubbly-press shadow-md font-bold'
+                    : 'rounded-full bg-zinc-100 text-zinc-950 hover:bg-white'
                 }`}
                 style={
-                  theme.id === 'pink-cloud'
+                  theme.id === 'terminal-tui'
+                    ? { backgroundColor: '#000000', color: '#00ff41', borderColor: '#00ff41' }
+                    : theme.id === 'pink-cloud'
                     ? { backgroundColor: 'var(--theme-accent)', color: '#1a1017' }
                     : { backgroundColor: 'var(--theme-text-primary)', color: 'var(--theme-bg-primary)' }
                 }

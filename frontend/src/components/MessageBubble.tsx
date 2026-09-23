@@ -58,6 +58,27 @@ export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleP
   const shapeClasses = getBubbleShapeClasses(isOwn, theme.bubbleStyle);
   const bounceClass = theme.id === 'pink-cloud' ? 'animate-pink-bounce' : '';
 
+  const isTui = theme.id === 'terminal-tui';
+  const isGlass = theme.bubbleStyle === 'glass';
+
+  let customBubbleClass = '';
+  if (isTui) {
+    customBubbleClass = isOwn ? 'tui-bubble-user' : 'tui-bubble-partner';
+  } else if (isGlass) {
+    customBubbleClass = isOwn ? 'glass-bubble-user' : 'glass-bubble-partner';
+  }
+
+  // Clip path chamfering is only applied to Cyberpunk sharp bubbles, NOT to Terminal TUI
+  const clipPathStyle = (!isTui && theme.bubbleStyle === 'sharp')
+    ? (isOwn
+        ? 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))'
+        : 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)')
+    : undefined;
+
+  const dropShadowFilter = (!isTui && theme.bubbleStyle === 'sharp')
+    ? 'drop-shadow(0 0 6px var(--theme-accent))'
+    : undefined;
+
   return (
     <div
       data-testid="message-bubble-wrapper"
@@ -66,7 +87,7 @@ export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleP
       <div
         className="max-w-[85%] sm:max-w-[75%] md:max-w-[65%]"
         style={{
-          filter: theme.bubbleStyle === 'sharp' ? 'drop-shadow(0 0 6px var(--theme-accent))' : undefined,
+          filter: dropShadowFilter,
         }}
       >
         <div
@@ -76,16 +97,18 @@ export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleP
             isOwn
               ? 'bg-zinc-100 text-zinc-950'
               : 'bg-zinc-900 text-zinc-100 border border-zinc-800'
-          } ${shapeClasses} ${bounceClass}`}
+          } ${shapeClasses} ${bounceClass} ${customBubbleClass}`}
           style={{
-            backgroundColor: isOwn ? 'var(--theme-bubble-user-bg)' : 'var(--theme-bubble-partner-bg)',
-            color: isOwn ? 'var(--theme-bubble-user-text)' : 'var(--theme-bubble-partner-text)',
-            borderColor: !isOwn ? 'var(--theme-border-subtle)' : undefined,
-            clipPath: theme.bubbleStyle === 'sharp'
-              ? (isOwn
-                  ? 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))'
-                  : 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)')
-              : undefined,
+            backgroundColor: isTui
+              ? undefined
+              : (isOwn ? 'var(--theme-bubble-user-bg)' : 'var(--theme-bubble-partner-bg)'),
+            color: isTui
+              ? undefined
+              : (isOwn ? 'var(--theme-bubble-user-text)' : 'var(--theme-bubble-partner-text)'),
+            borderColor: isTui
+              ? undefined
+              : (!isOwn ? 'var(--theme-border-subtle)' : undefined),
+            clipPath: clipPathStyle,
           }}
         >
           {message.media_type === 'image' && fileUrl && (

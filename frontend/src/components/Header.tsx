@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { pb } from '../lib/pocketbase';
 import { parseDate, toPocketBaseDate } from '../utils/date';
 
@@ -121,12 +122,26 @@ export function Header({
         ? Boolean(partner.is_typing)
         : Boolean(typingUntilMs > 0 && typingUntilMs > Date.now()));
 
+  let themeObj: any = null;
+  try {
+    const themeCtx = useTheme();
+    themeObj = themeCtx.theme;
+  } catch (_) {}
+  const themeId = themeObj?.id || 'minimalist-oled';
+
   return (
     <>
       <header
-        className={`flex h-14 shrink-0 items-center justify-between px-4 select-none backdrop-blur-md transition-colors duration-200 ${className}`}
+        className={`mx-3 sm:mx-4 mt-2 mb-1 flex h-14 shrink-0 items-center justify-between px-4 select-none rounded-2xl border transition-all duration-200 ${
+          themeId === 'terminal-tui'
+            ? 'border-[#00ff41] bg-black rounded-none shadow-[0_0_12px_rgba(0,255,65,0.25)]'
+            : themeId === 'daylight'
+            ? 'border-zinc-200 bg-white/95 text-zinc-900 shadow-xs backdrop-blur-md'
+            : 'border-white/15 glass-pane'
+        } ${className}`}
         style={{
-          backgroundColor: 'var(--theme-bg-glass)',
+          backgroundColor: themeId === 'terminal-tui' ? '#000000' : 'var(--theme-bg-glass)',
+          borderColor: themeId === 'terminal-tui' ? '#00ff41' : 'var(--theme-border-subtle)',
         }}
       >
         {/* Left: Partner info & Online status */}

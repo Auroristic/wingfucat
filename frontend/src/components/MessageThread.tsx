@@ -125,6 +125,29 @@ export function MessageThread({
           </div>
         )}
 
+        {themeId === 'terminal-tui' && (
+          <div className="flex flex-col items-start gap-1 max-w-sm w-full p-4 border border-[#00ff41] bg-black font-mono text-left shadow-[0_0_12px_rgba(0,255,65,0.2)]">
+            <div className="text-[11px] text-[#00ff41] border-b border-[#00ff41]/40 pb-1 w-full flex items-center justify-between">
+              <span>[TTY_01: ONLINE]</span>
+              <span className="animate-pulse">_</span>
+            </div>
+            <span className="text-xs text-[#00ff41] mt-1 font-bold">No messages yet</span>
+            <p className="text-[11px] text-[#00aa2b]">
+              &gt; Buffer initialized. Input transmission to commence session.
+            </p>
+          </div>
+        )}
+
+        {themeId === 'daylight' && (
+          <div className="flex flex-col items-center gap-1.5 text-zinc-500 text-sm max-w-xs">
+            <div className="h-12 w-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-1 shadow-xs">
+              <Icon name="wb_sunny" className="text-2xl" />
+            </div>
+            <span className="font-semibold text-zinc-800">No messages yet</span>
+            <p className="text-xs text-zinc-500">Send a note to start today's conversation</p>
+          </div>
+        )}
+
         {themeId === 'minimalist-oled' && (
           <div className="flex flex-col items-center gap-1.5 text-zinc-500 text-sm">
             <Icon name="chat_bubble_outline" className="text-2xl text-zinc-600 mb-1" />

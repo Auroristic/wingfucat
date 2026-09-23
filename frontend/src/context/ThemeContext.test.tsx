@@ -105,4 +105,30 @@ describe('ThemeContext', () => {
       theme_settings: expect.objectContaining({ id: 'pink-cloud' }),
     }));
   });
+
+  it('switches to terminal-tui and daylight presets and manages frost level', () => {
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider });
+
+    act(() => {
+      result.current.setPreset('terminal-tui');
+    });
+    expect(result.current.theme.id).toBe('terminal-tui');
+    expect(result.current.theme.headingFont).toBe('JetBrains Mono');
+    expect(result.current.theme.isGlassSupported).toBe(false);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('terminal-tui');
+
+    act(() => {
+      result.current.setPreset('daylight');
+    });
+    expect(result.current.theme.id).toBe('daylight');
+    expect(result.current.theme.colors.bgPrimary).toBe('#f8f9fa');
+    expect(result.current.theme.isGlassSupported).toBe(false);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('daylight');
+
+    act(() => {
+      result.current.setPreset('futuristic');
+      result.current.setGlassFrostLevel(50);
+    });
+    expect(result.current.theme.glassFrostLevel).toBe(50);
+  });
 });

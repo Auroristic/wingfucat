@@ -166,5 +166,23 @@ describe('MessageBubble Component', () => {
     );
     expect(screen.getByTestId('message-bubble')).toHaveClass('backdrop-blur-md');
   });
+
+  it('applies tui-bubble-user and tui-bubble-partner classes on terminal-tui preset', () => {
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'terminal-tui' }));
+    const { unmount } = render(
+      <ThemeProvider>
+        <MessageBubble message={baseMessage} isSelf={true} />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId('message-bubble')).toHaveClass('tui-bubble-user');
+    unmount();
+
+    render(
+      <ThemeProvider>
+        <MessageBubble message={baseMessage} isSelf={false} />
+      </ThemeProvider>
+    );
+    expect(screen.getByTestId('message-bubble')).toHaveClass('tui-bubble-partner');
+  });
 });
 
