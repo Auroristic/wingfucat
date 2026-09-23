@@ -73,4 +73,25 @@ describe('ThemeSettingsModal Component', () => {
     const preview = screen.getByTestId('theme-preview-box');
     expect(preview.style.backgroundImage).toContain('https://example.com/custom.jpg');
   });
+
+  it('renders sound effects controls and toggles sound setting', () => {
+    render(
+      <ThemeProvider>
+        <ThemeSettingsModal isOpen={true} onClose={vi.fn()} />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByText(/sound effects/i)).toBeInTheDocument();
+    const testSoundBtn = screen.getByRole('button', { name: /test sound/i });
+    expect(testSoundBtn).toBeInTheDocument();
+
+    const switchBtn = screen.getByRole('switch', { name: /toggle sound effects/i });
+    expect(switchBtn).toBeInTheDocument();
+    expect(switchBtn).toHaveAttribute('aria-checked', 'true');
+
+    fireEvent.click(switchBtn);
+    expect(switchBtn).toHaveAttribute('aria-checked', 'false');
+    expect(testSoundBtn).toBeDisabled();
+  });
 });
+

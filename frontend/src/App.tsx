@@ -9,6 +9,7 @@ import { ArchiveModal } from './components/ArchiveModal';
 import { ThemeSettingsModal } from './components/ThemeSettingsModal';
 import { pb } from './lib/pocketbase';
 import { parseDate, toPocketBaseDate } from './utils/date';
+import { unlockAudioContext } from './utils/soundEffects';
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -41,6 +42,21 @@ function AuthenticatedApp() {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Unlock Web Audio API on first user interaction for iOS Safari & browsers
+  useEffect(() => {
+    const handleInteraction = () => {
+      unlockAudioContext();
+      window.removeEventListener('pointerdown', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+    window.addEventListener('pointerdown', handleInteraction, { once: true });
+    window.addEventListener('keydown', handleInteraction, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
     };
   }, []);
 

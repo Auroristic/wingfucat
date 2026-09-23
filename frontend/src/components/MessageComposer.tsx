@@ -4,6 +4,7 @@ import { VoiceRecorder } from './VoiceRecorder';
 import { compressImage } from '../utils/imageCompressor';
 import { pb } from '../lib/pocketbase';
 import { useTheme } from '../context/ThemeContext';
+import { playMessageSentSound } from '../utils/soundEffects';
 import type { Message } from './MessageBubble';
 
 export interface MessageComposerProps {
@@ -126,6 +127,7 @@ export function MessageComposer({
 
       const created = await pb.collection('messages').create<Message>(formData);
 
+      playMessageSentSound(theme.id);
       setText('');
       clearImage();
       if (textareaRef.current) {
@@ -164,6 +166,7 @@ export function MessageComposer({
       formData.append('duration', String(durationSeconds));
 
       const created = await pb.collection('messages').create<Message>(formData);
+      playMessageSentSound(theme.id);
       setIsRecordingAudio(false);
       onMessageSent?.(created);
     } catch (err: any) {
@@ -183,7 +186,7 @@ export function MessageComposer({
     >
       <div className="mx-auto w-full max-w-3xl flex flex-col gap-1">
         {/* Themed typing indicator */}
-        <div className="h-5 px-2 flex items-center text-xs text-zinc-400 select-none overflow-hidden">
+        <div className="h-6 px-2 flex items-center text-xs text-zinc-400 select-none overflow-hidden">
           {isPartnerTyping && (
             <div
               data-testid="partner-typing-indicator"
@@ -214,9 +217,9 @@ export function MessageComposer({
                 </span>
               )}
               {theme.typingAnimation === 'neon-pulse' && (
-                <span className="flex items-center gap-1" data-testid="typing-neon-pulse">
+                <span className="flex items-center gap-1 font-mono text-cyan-400 text-xs tracking-wider animate-pulse" data-testid="typing-neon-pulse">
                   <span className="h-1.5 w-1.5 rounded-sm bg-[#00f0ff] animate-ping" />
-                  <span className="h-1.5 w-1.5 rounded-sm bg-[#ff003c] animate-pulse" />
+                  <span>[SYS.TYPING] █</span>
                 </span>
               )}
               {theme.typingAnimation === 'glow-bar' && (

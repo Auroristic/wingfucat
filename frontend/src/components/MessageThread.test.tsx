@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MessageThread } from './MessageThread';
+import { ThemeProvider } from '../context/ThemeContext';
 import type { Message } from './MessageBubble';
 
 describe('MessageThread Component', () => {
@@ -92,5 +93,24 @@ describe('MessageThread Component', () => {
     );
 
     expect(screen.queryByTestId('partner-typing-bubble')).toBeNull();
+  });
+
+  it('renders themed empty state for pink-cloud and cyberpunk', () => {
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'pink-cloud' }));
+    const { unmount } = render(
+      <ThemeProvider>
+        <MessageThread messages={[]} isLoading={false} currentUserId="usr_me" />
+      </ThemeProvider>
+    );
+    expect(screen.getByText(/send a sweet hello/i)).toBeInTheDocument();
+    unmount();
+
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'cyberpunk' }));
+    render(
+      <ThemeProvider>
+        <MessageThread messages={[]} isLoading={false} currentUserId="usr_me" />
+      </ThemeProvider>
+    );
+    expect(screen.getByText(/SYS\.STATUS/i)).toBeInTheDocument();
   });
 });

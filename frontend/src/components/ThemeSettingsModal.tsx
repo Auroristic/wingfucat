@@ -6,6 +6,7 @@ import {
   type BubbleStyle,
   type TypingAnimation,
 } from '../context/ThemeContext';
+import { isSoundEnabled, setSoundEnabled, playMessageSentSound } from '../utils/soundEffects';
 
 export interface ThemeSettingsModalProps {
   isOpen: boolean;
@@ -61,7 +62,17 @@ export function ThemeSettingsModal({
 
   const [customUrl, setCustomUrl] = useState('');
   const [wallpaperStatus, setWallpaperStatus] = useState<string | null>(null);
+  const [soundOn, setSoundOn] = useState<boolean>(() => isSoundEnabled());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setSoundEnabled(next);
+    if (next) {
+      playMessageSentSound(theme.id);
+    }
+  };
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -512,6 +523,49 @@ export function ThemeSettingsModal({
                 onChange={(e) => setWallpaperBlur(Number(e.target.value))}
                 className="w-full accent-white cursor-pointer h-1.5 bg-zinc-800 rounded-lg appearance-none"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 5: Audio & Sound Effects */}
+        <div className="flex flex-col gap-3 border-t border-zinc-800/60 pt-4 mt-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-xs font-medium uppercase tracking-wider text-zinc-400 font-heading block">
+                Sound Effects
+              </span>
+              <p className="text-[11px] text-zinc-400">
+                Procedural audio synthesized specifically for each theme
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => playMessageSentSound(theme.id)}
+                disabled={!soundOn}
+                className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 py-1.5 px-2.5 text-xs text-zinc-300 disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                <Icon name="volume_up" className="text-sm" />
+                <span>Test Sound</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleSound}
+                role="switch"
+                aria-checked={soundOn}
+                aria-label="Toggle sound effects"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                  soundOn ? 'bg-emerald-500' : 'bg-zinc-800'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    soundOn ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
           </div>
         </div>
