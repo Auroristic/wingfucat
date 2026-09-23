@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from './Icon';
 import { MessageBubble, type Message } from './MessageBubble';
 import { pb } from '../lib/pocketbase';
@@ -121,17 +121,41 @@ export function ArchiveModal({
     return () => clearTimeout(timer);
   }, [confirmClearStep, countdown]);
 
-  // Escape key listener for modal accessibility
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Escape key and mobile back gesture listener for modal accessibility
   useEffect(() => {
     if (!isOpen) return;
+
+    let hasPushed = false;
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ modal: 'archive' }, '');
+      hasPushed = true;
+    }
+
+    const handlePopState = () => {
+      hasPushed = false;
+      onCloseRef.current();
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
       }
     };
+
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
+      if (hasPushed && typeof window !== 'undefined' && window.history.state?.modal === 'archive') {
+        window.history.back();
+      }
+    };
+  }, [isOpen]);
 
   const handleRestore = useCallback(async () => {
     setIsRestoring(true);
@@ -222,6 +246,11 @@ export function ArchiveModal({
       role="dialog"
       aria-modal="true"
       aria-label="Archived Messages"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xs p-4 sm:p-6 select-none"
     >
       <div

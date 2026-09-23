@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { pb } from '../lib/pocketbase';
 
 import pinkCloudWp from '../assets/wallpapers/pink-cloud.svg';
@@ -253,6 +253,7 @@ export interface ActiveTheme {
   glassFrostLevel: number;
   isGlassSupported: boolean;
   colors: ThemeConfig['colors'];
+  updatedAt?: number;
 }
 
 export interface ThemeContextType {
@@ -317,6 +318,7 @@ export const parseThemeFromData = (data: any, fallbackFrost = 75): ActiveTheme |
     glassFrostLevel: frost,
     isGlassSupported: base.isGlassSupported,
     colors: base.colors,
+    updatedAt: typeof data.updatedAt === 'number' ? data.updatedAt : undefined,
   };
 };
 
@@ -334,24 +336,32 @@ const getInitialTheme = (): ActiveTheme => {
       }
     } catch (_) {}
 
-    // 1. If user is currently authenticated in pb.authStore, check theme_settings on record
+    // Account-aware theme resolution: compare timestamps between server record and local cache
+    let serverTheme: ActiveTheme | null = null;
+    let localTheme: ActiveTheme | null = null;
+
     if (currentUserId && (pb.authStore?.record as any)?.theme_settings) {
-      const parsed = parseThemeFromData((pb.authStore.record as any).theme_settings, savedFrost);
-      if (parsed) return parsed;
+      serverTheme = parseThemeFromData((pb.authStore.record as any).theme_settings, savedFrost);
     }
 
-    // 2. If authenticated, check account-scoped localStorage
     if (currentUserId) {
       try {
         const scopedSaved = localStorage.getItem(`wingfucat_theme_${currentUserId}`);
         if (scopedSaved) {
-          const parsed = parseThemeFromData(JSON.parse(scopedSaved), savedFrost);
-          if (parsed) return parsed;
+          localTheme = parseThemeFromData(JSON.parse(scopedSaved), savedFrost);
         }
       } catch (_) {}
     }
 
-    // 3. Fallback to un-scoped localStorage (e.g. for unauthenticated preview or test compatibility)
+    if (serverTheme && localTheme) {
+      const serverTime = serverTheme.updatedAt || 0;
+      const localTime = localTheme.updatedAt || 0;
+      return localTime >= serverTime ? localTheme : serverTheme;
+    }
+    if (localTheme) return localTheme;
+    if (serverTheme) return serverTheme;
+
+    // Fallback to un-scoped localStorage (e.g. for unauthenticated preview or test compatibility)
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -432,21 +442,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.setAttribute('data-theme', theme.id);
   }, [theme]);
 
+  const lastLocalUpdateRef = useRef<number>(0);
+  const cloudUpdateTimerRef = useRef<any>(null);
+
   // Sync to localStorage and PocketBase account safely
-  const persistTheme = useCallback((updated: ActiveTheme) => {
+  const persistTheme = useCallback((updated: ActiveTheme, debounce = false) => {
     const currentUserId = pb.authStore?.record?.id;
+    const now = Date.now();
+    lastLocalUpdateRef.current = now;
+
+    const themeWithTimestamp: ActiveTheme = {
+      ...updated,
+      updatedAt: now,
+    };
 
     if (typeof window !== 'undefined') {
       try {
         if (currentUserId) {
-          localStorage.setItem(`wingfucat_theme_${currentUserId}`, JSON.stringify(updated));
-          localStorage.setItem(`wingfucat_glass_frost_${currentUserId}`, String(updated.glassFrostLevel));
+          localStorage.setItem(`wingfucat_theme_${currentUserId}`, JSON.stringify(themeWithTimestamp));
+          localStorage.setItem(`wingfucat_glass_frost_${currentUserId}`, String(themeWithTimestamp.glassFrostLevel));
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        localStorage.setItem(FROST_STORAGE_KEY, String(updated.glassFrostLevel));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(themeWithTimestamp));
+        localStorage.setItem(FROST_STORAGE_KEY, String(themeWithTimestamp.glassFrostLevel));
       } catch (_) {
         try {
-          const fallback = { ...updated, wallpaperUrl: THEME_PRESETS[updated.id].defaultWallpaper };
+          const fallback = { ...themeWithTimestamp, wallpaperUrl: THEME_PRESETS[updated.id].defaultWallpaper };
           if (currentUserId) {
             localStorage.setItem(`wingfucat_theme_${currentUserId}`, JSON.stringify(fallback));
           }
@@ -456,32 +476,46 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (currentUserId && typeof pb.collection === 'function') {
-      try {
-        const safeWallpaper = updated.wallpaperUrl && updated.wallpaperUrl.length > 300000
-          ? null
-          : updated.wallpaperUrl;
+      const safeWallpaper = themeWithTimestamp.wallpaperUrl && themeWithTimestamp.wallpaperUrl.length > 300000
+        ? null
+        : themeWithTimestamp.wallpaperUrl;
 
-        const settingsPayload = {
-          id: updated.id,
-          bubbleStyle: updated.bubbleStyle,
-          typingAnimation: updated.typingAnimation,
-          wallpaperUrl: safeWallpaper,
-          wallpaperDim: updated.wallpaperDim,
-          wallpaperBlur: updated.wallpaperBlur,
-          glassFrostLevel: updated.glassFrostLevel,
-        };
+      const settingsPayload = {
+        id: themeWithTimestamp.id,
+        bubbleStyle: themeWithTimestamp.bubbleStyle,
+        typingAnimation: themeWithTimestamp.typingAnimation,
+        wallpaperUrl: safeWallpaper,
+        wallpaperDim: themeWithTimestamp.wallpaperDim,
+        wallpaperBlur: themeWithTimestamp.wallpaperBlur,
+        glassFrostLevel: themeWithTimestamp.glassFrostLevel,
+        updatedAt: now,
+      };
 
-        if (pb.authStore?.record) {
-          (pb.authStore.record as any).theme_settings = settingsPayload;
+      if (pb.authStore?.record) {
+        (pb.authStore.record as any).theme_settings = settingsPayload;
+        if (pb.authStore.token && typeof pb.authStore.save === 'function') {
+          pb.authStore.save(pb.authStore.token, pb.authStore.record);
         }
+      }
 
-        const usersCol = pb.collection('users');
-        if (usersCol && typeof usersCol.update === 'function') {
-          usersCol.update(currentUserId, {
-            theme_settings: settingsPayload,
-          }).catch(() => {});
-        }
-      } catch (_) {}
+      const sendCloudUpdate = () => {
+        try {
+          const usersCol = pb.collection('users');
+          if (usersCol && typeof usersCol.update === 'function') {
+            usersCol.update(currentUserId, {
+              theme_settings: settingsPayload,
+            }).catch(() => {});
+          }
+        } catch (_) {}
+      };
+
+      if (debounce) {
+        if (cloudUpdateTimerRef.current) clearTimeout(cloudUpdateTimerRef.current);
+        cloudUpdateTimerRef.current = setTimeout(sendCloudUpdate, 350);
+      } else {
+        if (cloudUpdateTimerRef.current) clearTimeout(cloudUpdateTimerRef.current);
+        sendCloudUpdate();
+      }
     }
   }, []);
 
@@ -535,7 +569,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setWallpaperDim = useCallback((dim: number) => {
     setTheme((prev) => {
       const next = { ...prev, wallpaperDim: Math.max(0, Math.min(90, dim)) };
-      persistTheme(next);
+      persistTheme(next, true);
       return next;
     });
   }, [persistTheme]);
@@ -543,7 +577,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setWallpaperBlur = useCallback((blur: number) => {
     setTheme((prev) => {
       const next = { ...prev, wallpaperBlur: Math.max(0, Math.min(20, blur)) };
-      persistTheme(next);
+      persistTheme(next, true);
       return next;
     });
   }, [persistTheme]);
@@ -552,7 +586,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme((prev) => {
       const clamped = Math.max(0, Math.min(100, level));
       const next = { ...prev, glassFrostLevel: clamped };
-      persistTheme(next);
+      persistTheme(next, true);
       return next;
     });
   }, [persistTheme]);
@@ -566,7 +600,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     let unsubscribePb: (() => void) | undefined;
     let isMounted = true;
 
-    const applyTheme = (next: ActiveTheme, userId?: string) => {
+    const applyTheme = (next: ActiveTheme) => {
       setTheme((prev) => {
         if (
           prev.id === next.id &&
@@ -581,17 +615,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
         return next;
       });
-
-      if (typeof window !== 'undefined') {
-        try {
-          if (userId) {
-            localStorage.setItem(`wingfucat_theme_${userId}`, JSON.stringify(next));
-            localStorage.setItem(`wingfucat_glass_frost_${userId}`, String(next.glassFrostLevel));
-          }
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-          localStorage.setItem(FROST_STORAGE_KEY, String(next.glassFrostLevel));
-        } catch (_) {}
-      }
     };
 
     const syncUserTheme = (userRecord: any) => {
@@ -617,42 +640,59 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const userId = userRecord.id;
       let applied = false;
 
-      // 1. Direct record check from authStore (synchronous)
+      let serverTheme: ActiveTheme | null = null;
+      let localTheme: ActiveTheme | null = null;
+
       if (userRecord.theme_settings) {
-        const parsed = parseThemeFromData(userRecord.theme_settings);
-        if (parsed) {
-          applyTheme(parsed, userId);
-          applied = true;
-        }
+        serverTheme = parseThemeFromData(userRecord.theme_settings);
       }
 
-      // 2. Account-scoped local cache, or generic storage fallback (synchronous)
-      if (!applied && typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
         try {
           const accountCached = localStorage.getItem(`wingfucat_theme_${userId}`);
           if (accountCached) {
-            const parsed = parseThemeFromData(JSON.parse(accountCached));
-            if (parsed) {
-              applyTheme(parsed, userId);
-              applied = true;
-            }
+            localTheme = parseThemeFromData(JSON.parse(accountCached));
           } else {
             const genericCached = localStorage.getItem(STORAGE_KEY);
             if (genericCached) {
-              const parsed = parseThemeFromData(JSON.parse(genericCached));
-              if (parsed) {
-                applyTheme(parsed);
-                applied = true;
-              }
+              localTheme = parseThemeFromData(JSON.parse(genericCached));
             }
           }
         } catch (_) {}
       }
 
-      // 3. Fallback to clean default if neither exists yet (synchronous)
+      const serverTime = serverTheme?.updatedAt || 0;
+      const localTime = localTheme?.updatedAt || 0;
+
+      if (serverTheme && localTheme) {
+        if (localTime >= serverTime) {
+          applyTheme(localTheme);
+          applied = true;
+        } else {
+          applyTheme(serverTheme);
+          applied = true;
+        }
+      } else if (localTheme) {
+        applyTheme(localTheme);
+        applied = true;
+      } else if (serverTheme) {
+        applyTheme(serverTheme);
+        applied = true;
+      }
+
+      // Fallback to clean default if neither exists yet (synchronous)
       if (!applied) {
         applyTheme(getDefaultTheme());
       }
+
+      const shouldAcceptServerUpdate = (serverSettings: any): boolean => {
+        if (!serverSettings || typeof serverSettings !== 'object') return false;
+        const serverTime = Number(serverSettings.updatedAt);
+        if (!isNaN(serverTime) && serverTime > 0) {
+          return serverTime > lastLocalUpdateRef.current;
+        }
+        return Date.now() - lastLocalUpdateRef.current > 4000;
+      };
 
       // 4. Subscribe to realtime updates for this user record (cross-device sync)
       if (typeof pb.collection === 'function') {
@@ -661,9 +701,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           if (usersCol && typeof usersCol.subscribe === 'function') {
             const maybePromise = usersCol.subscribe(userId, (e: any) => {
               if (e.action === 'update' && e.record?.theme_settings) {
+                if (!shouldAcceptServerUpdate(e.record.theme_settings)) {
+                  return;
+                }
                 const parsed = parseThemeFromData(e.record.theme_settings);
                 if (parsed) {
-                  applyTheme(parsed, userId);
+                  applyTheme(parsed);
                 }
               }
             });
@@ -686,9 +729,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             usersCol.getOne(userId).then((freshUser: any) => {
               if (!isMounted) return;
               if (freshUser?.theme_settings) {
+                if (!shouldAcceptServerUpdate(freshUser.theme_settings)) {
+                  return;
+                }
                 const parsed = parseThemeFromData(freshUser.theme_settings);
                 if (parsed) {
-                  applyTheme(parsed, userId);
+                  applyTheme(parsed);
                 }
               }
             }).catch(() => {});

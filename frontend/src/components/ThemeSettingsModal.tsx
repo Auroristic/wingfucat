@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Icon } from './Icon';
 import {
   useTheme,
@@ -76,20 +76,41 @@ export function ThemeSettingsModal({
     }
   };
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    },
-    [onClose]
-  );
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return;
+
+    let hasPushed = false;
+    // Mobile back navigation: push a modal history state so Android/iOS back gesture closes modal
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ modal: 'theme-settings' }, '');
+      hasPushed = true;
+    }
+
+    const handlePopState = () => {
+      hasPushed = false;
+      onCloseRef.current();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseRef.current();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, handleKeyDown]);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
+      if (hasPushed && typeof window !== 'undefined' && window.history.state?.modal === 'theme-settings') {
+        window.history.back();
+      }
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -117,6 +138,11 @@ export function ThemeSettingsModal({
       role="dialog"
       aria-modal="true"
       aria-label="Appearance & Themes"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
     >
       <div
@@ -834,6 +860,35 @@ export function ThemeSettingsModal({
             </div>
           </div>
         )}
+
+        {/* Bottom Save & Close button for mobile and quick action */}
+        <div
+          className="mt-4 pt-3 border-t flex justify-end"
+          style={{
+            borderColor: isTui ? '#00ff41' : isDaylight ? '#e4e4e7' : 'var(--theme-border-subtle)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Save and close theme settings"
+            className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-medium text-xs tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              isTui
+                ? 'rounded-none border border-[#00ff41] bg-black text-[#00ff41] hover:bg-[#00ff41] hover:text-black font-mono'
+                : isDaylight
+                ? 'bg-zinc-900 text-white hover:bg-zinc-800'
+                : 'text-white hover:brightness-110 active:scale-95'
+            }`}
+            style={
+              !isTui && !isDaylight
+                ? { backgroundColor: 'var(--theme-accent)', color: '#ffffff' }
+                : undefined
+            }
+          >
+            <Icon name="check" className="text-base" />
+            <span>{isTui ? '[ DONE / EXIT ]' : 'Done'}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

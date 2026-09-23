@@ -55,6 +55,35 @@ describe('ThemeSettingsModal Component', () => {
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
+  it('calls onClose when mobile back navigation (popstate) occurs', () => {
+    const handleClose = vi.fn();
+    render(
+      <ThemeProvider>
+        <ThemeSettingsModal isOpen={true} onClose={handleClose} />
+      </ThemeProvider>
+    );
+
+    fireEvent(window, new PopStateEvent('popstate'));
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose when backdrop or bottom Done button is clicked', () => {
+    const handleClose = vi.fn();
+    render(
+      <ThemeProvider>
+        <ThemeSettingsModal isOpen={true} onClose={handleClose} />
+      </ThemeProvider>
+    );
+
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(dialog);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+
+    const doneBtn = screen.getByRole('button', { name: /save and close theme settings/i });
+    fireEvent.click(doneBtn);
+    expect(handleClose).toHaveBeenCalledTimes(2);
+  });
+
   it('renders wallpaper controls and updates wallpaper via URL input', () => {
     render(
       <ThemeProvider>
