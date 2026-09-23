@@ -3,13 +3,31 @@ import { renderHook, act } from '@testing-library/react';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { pb } from '../lib/pocketbase';
 
+let authChangeCallbacks: Array<(token: string, record: any) => void> = [];
+
 vi.mock('../lib/pocketbase', () => ({
   pb: {
     authStore: {
       record: { id: 'u-1', theme_settings: null },
+      onChange: vi.fn((cb) => {
+        authChangeCallbacks.push(cb);
+        return () => {
+          authChangeCallbacks = authChangeCallbacks.filter((c) => c !== cb);
+        };
+      }),
+      clear: vi.fn(() => {
+        (pb.authStore as any).record = null;
+        authChangeCallbacks.forEach((cb) => cb('', null));
+      }),
+      save: vi.fn((token, record) => {
+        (pb.authStore as any).record = record;
+        authChangeCallbacks.forEach((cb) => cb(token, record));
+      }),
     },
     collection: vi.fn(() => ({
       update: vi.fn().mockResolvedValue({ id: 'u-1' }),
+      getOne: vi.fn().mockResolvedValue({ id: 'u-1', theme_settings: null }),
+      subscribe: vi.fn().mockResolvedValue(vi.fn()),
     })),
   },
 }));
@@ -17,6 +35,8 @@ vi.mock('../lib/pocketbase', () => ({
 describe('ThemeContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authChangeCallbacks = [];
+    (pb.authStore as any).record = { id: 'u-1', theme_settings: null };
     localStorage.clear();
     document.documentElement.className = '';
   });
@@ -89,9 +109,13 @@ describe('ThemeContext', () => {
     expect(result.current.theme.typingAnimation).toBe('dots');
   });
 
-  it('saves preferences to localStorage and PocketBase user record', () => {
+  it('saves preferences to account-scoped localStorage and PocketBase user record', () => {
     const updateSpy = vi.fn().mockResolvedValue({ id: 'u-1' });
-    (pb.collection as any).mockReturnValue({ update: updateSpy });
+    (pb.collection as any).mockReturnValue({
+      update: updateSpy,
+      getOne: vi.fn().mockResolvedValue({ id: 'u-1', theme_settings: null }),
+      subscribe: vi.fn().mockResolvedValue(vi.fn()),
+    });
 
     const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider });
 
@@ -99,8 +123,10 @@ describe('ThemeContext', () => {
       result.current.setPreset('pink-cloud');
     });
 
-    const stored = JSON.parse(localStorage.getItem('wingfucat_theme') || '{}');
-    expect(stored.id).toBe('pink-cloud');
+    const scopedStored = JSON.parse(localStorage.getItem('wingfucat_theme_u-1') || '{}');
+    expect(scopedStored.id).toBe('pink-cloud');
+    const genericStored = JSON.parse(localStorage.getItem('wingfucat_theme') || '{}');
+    expect(genericStored.id).toBe('pink-cloud');
     expect(updateSpy).toHaveBeenCalledWith('u-1', expect.objectContaining({
       theme_settings: expect.objectContaining({ id: 'pink-cloud' }),
     }));
@@ -130,5 +156,117 @@ describe('ThemeContext', () => {
       result.current.setGlassFrostLevel(50);
     });
     expect(result.current.theme.glassFrostLevel).toBe(50);
+  });
+
+  it('hydrates theme from authStore user record upon login', async () => {
+    (pb.authStore as any).record = null;
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider });
+    expect(result.current.theme.id).toBe('minimalist-oled');
+
+    await act(async () => {
+      pb.authStore.save('token-123', {
+        id: 'u-1',
+        theme_settings: {
+          id: 'pink-cloud',
+          bubbleStyle: 'soft-cloud',
+          typingAnimation: 'hearts',
+        },
+      } as any);
+    });
+
+    expect(result.current.theme.id).toBe('pink-cloud');
+    expect(result.current.theme.bubbleStyle).toBe('soft-cloud');
+    expect(result.current.theme.typingAnimation).toBe('hearts');
+  });
+
+  it('resets to default theme and clears active storage on logout', async () => {
+    (pb.authStore as any).record = {
+      id: 'u-1',
+      theme_settings: { id: 'cyberpunk' },
+    };
+
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider });
+    expect(result.current.theme.id).toBe('cyberpunk');
+
+    await act(async () => {
+      pb.authStore.clear();
+    });
+
+    expect(result.current.theme.id).toBe('minimalist-oled');
+    expect(localStorage.getItem('wingfucat_theme')).toBeNull();
+  });
+
+  it('isolates theme settings between two different accounts on the same device', async () => {
+    // 1. User A (retro) logs in and sets pink-cloud
+    (pb.authStore as any).record = { id: 'retro', theme_settings: null };
+    const { result, unmount } = renderHook(() => useTheme(), { wrapper: ThemeProvider });
+
+    act(() => {
+      result.current.setPreset('pink-cloud');
+    });
+    expect(result.current.theme.id).toBe('pink-cloud');
+    expect(JSON.parse(localStorage.getItem('wingfucat_theme_retro') || '{}').id).toBe('pink-cloud');
+
+    // 2. User A logs out
+    await act(async () => {
+      pb.authStore.clear();
+    });
+    expect(result.current.theme.id).toBe('minimalist-oled');
+    unmount();
+
+    // 3. User B (wingfu) logs in with NO custom theme_settings
+    (pb.authStore as any).record = { id: 'wingfu', theme_settings: null };
+    const { result: wingfuResult } = renderHook(() => useTheme(), { wrapper: ThemeProvider });
+
+    // Wingfu MUST NOT inherit retro's pink-cloud
+    expect(wingfuResult.current.theme.id).toBe('minimalist-oled');
+
+    // Wingfu selects cyberpunk
+    act(() => {
+      wingfuResult.current.setPreset('cyberpunk');
+    });
+    expect(wingfuResult.current.theme.id).toBe('cyberpunk');
+    expect(JSON.parse(localStorage.getItem('wingfucat_theme_wingfu') || '{}').id).toBe('cyberpunk');
+    // Retro's theme in storage remains intact
+    expect(JSON.parse(localStorage.getItem('wingfucat_theme_retro') || '{}').id).toBe('pink-cloud');
+  });
+
+  it('syncs theme updates across devices via PocketBase realtime subscription', async () => {
+    (pb.authStore as any).record = { id: 'u-1', theme_settings: null };
+    let realtimeCb: ((e: any) => void) | null = null;
+    (pb.collection as any).mockReturnValue({
+      update: vi.fn().mockResolvedValue({ id: 'u-1' }),
+      getOne: vi.fn().mockResolvedValue({ id: 'u-1', theme_settings: null }),
+      subscribe: vi.fn().mockImplementation((_id: string, cb: any) => {
+        realtimeCb = cb;
+        return vi.fn();
+      }),
+    });
+
+    const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider });
+    expect(result.current.theme.id).toBe('minimalist-oled');
+
+    // Simulate cross-device update from desktop
+    await act(async () => {
+      if (realtimeCb) {
+        realtimeCb({
+          action: 'update',
+          record: {
+            id: 'u-1',
+            theme_settings: {
+              id: 'futuristic',
+              bubbleStyle: 'glass',
+              typingAnimation: 'glow-bar',
+              glassFrostLevel: 80,
+            },
+          },
+        });
+      }
+    });
+
+    expect(result.current.theme.id).toBe('futuristic');
+    expect(result.current.theme.bubbleStyle).toBe('glass');
+    expect(result.current.theme.typingAnimation).toBe('glow-bar');
+    expect(result.current.theme.glassFrostLevel).toBe(80);
   });
 });

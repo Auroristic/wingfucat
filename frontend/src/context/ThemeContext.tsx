@@ -270,43 +270,8 @@ export interface ThemeContextType {
 const STORAGE_KEY = 'wingfucat_theme';
 const FROST_STORAGE_KEY = 'wingfucat_glass_frost';
 
-const getInitialTheme = (): ActiveTheme => {
+export const getDefaultTheme = (): ActiveTheme => {
   const defaultPreset = THEME_PRESETS['minimalist-oled'];
-  let savedFrost = 75;
-
-  if (typeof window !== 'undefined') {
-    try {
-      const frostStr = localStorage.getItem(FROST_STORAGE_KEY);
-      if (frostStr !== null) {
-        const num = Number(frostStr);
-        if (!isNaN(num)) savedFrost = Math.max(0, Math.min(100, num));
-      }
-    } catch (_) {}
-
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.id && THEME_PRESETS[parsed.id as ThemePresetId]) {
-          const base = THEME_PRESETS[parsed.id as ThemePresetId];
-          return {
-            id: base.id,
-            headingFont: base.headingFont,
-            bodyFont: base.bodyFont,
-            bubbleStyle: parsed.bubbleStyle || base.bubbleStyle,
-            typingAnimation: parsed.typingAnimation || base.typingAnimation,
-            wallpaperUrl: parsed.wallpaperUrl || base.defaultWallpaper,
-            wallpaperDim: typeof parsed.wallpaperDim === 'number' ? parsed.wallpaperDim : 35,
-            wallpaperBlur: typeof parsed.wallpaperBlur === 'number' ? parsed.wallpaperBlur : 0,
-            glassFrostLevel: typeof parsed.glassFrostLevel === 'number' ? parsed.glassFrostLevel : savedFrost,
-            isGlassSupported: base.isGlassSupported,
-            colors: base.colors,
-          };
-        }
-      }
-    } catch (_) {}
-  }
-
   return {
     id: defaultPreset.id,
     headingFont: defaultPreset.headingFont,
@@ -316,10 +281,87 @@ const getInitialTheme = (): ActiveTheme => {
     wallpaperUrl: defaultPreset.defaultWallpaper,
     wallpaperDim: 35,
     wallpaperBlur: 0,
-    glassFrostLevel: savedFrost,
+    glassFrostLevel: 75,
     isGlassSupported: defaultPreset.isGlassSupported,
     colors: defaultPreset.colors,
   };
+};
+
+export const parseThemeFromData = (data: any, fallbackFrost = 75): ActiveTheme | null => {
+  if (!data || typeof data !== 'object') return null;
+  const presetId = data.id as ThemePresetId;
+  const base = THEME_PRESETS[presetId];
+  if (!base) return null;
+
+  const validBubble = ['rounded', 'sharp', 'soft-cloud', 'glass'].includes(data.bubbleStyle)
+    ? (data.bubbleStyle as BubbleStyle)
+    : base.bubbleStyle;
+
+  const validTyping = ['dots', 'hearts', 'neon-pulse', 'glow-bar'].includes(data.typingAnimation)
+    ? (data.typingAnimation as TypingAnimation)
+    : base.typingAnimation;
+
+  const frost = typeof data.glassFrostLevel === 'number'
+    ? Math.max(0, Math.min(100, data.glassFrostLevel))
+    : (base.isGlassSupported ? fallbackFrost : 0);
+
+  return {
+    id: base.id,
+    headingFont: base.headingFont,
+    bodyFont: base.bodyFont,
+    bubbleStyle: validBubble,
+    typingAnimation: validTyping,
+    wallpaperUrl: typeof data.wallpaperUrl === 'string' && data.wallpaperUrl ? data.wallpaperUrl : base.defaultWallpaper,
+    wallpaperDim: typeof data.wallpaperDim === 'number' ? Math.max(0, Math.min(90, data.wallpaperDim)) : 35,
+    wallpaperBlur: typeof data.wallpaperBlur === 'number' ? Math.max(0, Math.min(20, data.wallpaperBlur)) : 0,
+    glassFrostLevel: frost,
+    isGlassSupported: base.isGlassSupported,
+    colors: base.colors,
+  };
+};
+
+const getInitialTheme = (): ActiveTheme => {
+  const currentUserId = pb.authStore?.record?.id;
+  let savedFrost = 75;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const frostKey = currentUserId ? `wingfucat_glass_frost_${currentUserId}` : FROST_STORAGE_KEY;
+      const frostStr = localStorage.getItem(frostKey) || localStorage.getItem(FROST_STORAGE_KEY);
+      if (frostStr !== null) {
+        const num = Number(frostStr);
+        if (!isNaN(num)) savedFrost = Math.max(0, Math.min(100, num));
+      }
+    } catch (_) {}
+
+    // 1. If user is currently authenticated in pb.authStore, check theme_settings on record
+    if (currentUserId && (pb.authStore?.record as any)?.theme_settings) {
+      const parsed = parseThemeFromData((pb.authStore.record as any).theme_settings, savedFrost);
+      if (parsed) return parsed;
+    }
+
+    // 2. If authenticated, check account-scoped localStorage
+    if (currentUserId) {
+      try {
+        const scopedSaved = localStorage.getItem(`wingfucat_theme_${currentUserId}`);
+        if (scopedSaved) {
+          const parsed = parseThemeFromData(JSON.parse(scopedSaved), savedFrost);
+          if (parsed) return parsed;
+        }
+      } catch (_) {}
+    }
+
+    // 3. Fallback to un-scoped localStorage (e.g. for unauthenticated preview or test compatibility)
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = parseThemeFromData(JSON.parse(saved), savedFrost);
+        if (parsed) return parsed;
+      }
+    } catch (_) {}
+  }
+
+  return getDefaultTheme();
 };
 
 export const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -392,36 +434,53 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Sync to localStorage and PocketBase account safely
   const persistTheme = useCallback((updated: ActiveTheme) => {
+    const currentUserId = pb.authStore?.record?.id;
+
     if (typeof window !== 'undefined') {
       try {
+        if (currentUserId) {
+          localStorage.setItem(`wingfucat_theme_${currentUserId}`, JSON.stringify(updated));
+          localStorage.setItem(`wingfucat_glass_frost_${currentUserId}`, String(updated.glassFrostLevel));
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         localStorage.setItem(FROST_STORAGE_KEY, String(updated.glassFrostLevel));
       } catch (_) {
         try {
           const fallback = { ...updated, wallpaperUrl: THEME_PRESETS[updated.id].defaultWallpaper };
+          if (currentUserId) {
+            localStorage.setItem(`wingfucat_theme_${currentUserId}`, JSON.stringify(fallback));
+          }
           localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
         } catch (__) {}
       }
     }
 
-    const currentUserId = pb.authStore.record?.id;
-    if (currentUserId) {
+    if (currentUserId && typeof pb.collection === 'function') {
       try {
         const safeWallpaper = updated.wallpaperUrl && updated.wallpaperUrl.length > 300000
           ? null
           : updated.wallpaperUrl;
 
-        pb.collection('users').update(currentUserId, {
-          theme_settings: {
-            id: updated.id,
-            bubbleStyle: updated.bubbleStyle,
-            typingAnimation: updated.typingAnimation,
-            wallpaperUrl: safeWallpaper,
-            wallpaperDim: updated.wallpaperDim,
-            wallpaperBlur: updated.wallpaperBlur,
-            glassFrostLevel: updated.glassFrostLevel,
-          },
-        }).catch(() => {});
+        const settingsPayload = {
+          id: updated.id,
+          bubbleStyle: updated.bubbleStyle,
+          typingAnimation: updated.typingAnimation,
+          wallpaperUrl: safeWallpaper,
+          wallpaperDim: updated.wallpaperDim,
+          wallpaperBlur: updated.wallpaperBlur,
+          glassFrostLevel: updated.glassFrostLevel,
+        };
+
+        if (pb.authStore?.record) {
+          (pb.authStore.record as any).theme_settings = settingsPayload;
+        }
+
+        const usersCol = pb.collection('users');
+        if (usersCol && typeof usersCol.update === 'function') {
+          usersCol.update(currentUserId, {
+            theme_settings: settingsPayload,
+          }).catch(() => {});
+        }
       } catch (_) {}
     }
   }, []);
@@ -502,27 +561,168 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setPreset('minimalist-oled');
   }, [setPreset]);
 
-  // Load user's saved theme from PocketBase if available on mount
+  // Listen to authStore changes (login, logout, account switch) and sync account theme
   useEffect(() => {
-    const userSettings = (pb.authStore.record as any)?.theme_settings;
-    if (userSettings?.id && THEME_PRESETS[userSettings.id as ThemePresetId]) {
-      const base = THEME_PRESETS[userSettings.id as ThemePresetId];
-      setTheme((prev) => ({
-        id: base.id,
-        headingFont: base.headingFont,
-        bodyFont: base.bodyFont,
-        bubbleStyle: userSettings.bubbleStyle || base.bubbleStyle,
-        typingAnimation: userSettings.typingAnimation || base.typingAnimation,
-        wallpaperUrl: userSettings.wallpaperUrl || base.defaultWallpaper,
-        wallpaperDim: typeof userSettings.wallpaperDim === 'number' ? userSettings.wallpaperDim : 35,
-        wallpaperBlur: typeof userSettings.wallpaperBlur === 'number' ? userSettings.wallpaperBlur : 0,
-        glassFrostLevel: typeof userSettings.glassFrostLevel === 'number'
-          ? userSettings.glassFrostLevel
-          : (base.isGlassSupported ? prev.glassFrostLevel : 0),
-        isGlassSupported: base.isGlassSupported,
-        colors: base.colors,
-      }));
+    let unsubscribePb: (() => void) | undefined;
+    let isMounted = true;
+
+    const applyTheme = (next: ActiveTheme, userId?: string) => {
+      setTheme((prev) => {
+        if (
+          prev.id === next.id &&
+          prev.bubbleStyle === next.bubbleStyle &&
+          prev.typingAnimation === next.typingAnimation &&
+          prev.wallpaperUrl === next.wallpaperUrl &&
+          prev.wallpaperDim === next.wallpaperDim &&
+          prev.wallpaperBlur === next.wallpaperBlur &&
+          prev.glassFrostLevel === next.glassFrostLevel
+        ) {
+          return prev;
+        }
+        return next;
+      });
+
+      if (typeof window !== 'undefined') {
+        try {
+          if (userId) {
+            localStorage.setItem(`wingfucat_theme_${userId}`, JSON.stringify(next));
+            localStorage.setItem(`wingfucat_glass_frost_${userId}`, String(next.glassFrostLevel));
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          localStorage.setItem(FROST_STORAGE_KEY, String(next.glassFrostLevel));
+        } catch (_) {}
+      }
+    };
+
+    const syncUserTheme = (userRecord: any) => {
+      if (unsubscribePb) {
+        try {
+          unsubscribePb();
+        } catch (_) {}
+        unsubscribePb = undefined;
+      }
+
+      if (!userRecord?.id) {
+        // User logged out: Reset to default theme and clear un-scoped active storage
+        applyTheme(getDefaultTheme());
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(FROST_STORAGE_KEY);
+          } catch (_) {}
+        }
+        return;
+      }
+
+      const userId = userRecord.id;
+      let applied = false;
+
+      // 1. Direct record check from authStore (synchronous)
+      if (userRecord.theme_settings) {
+        const parsed = parseThemeFromData(userRecord.theme_settings);
+        if (parsed) {
+          applyTheme(parsed, userId);
+          applied = true;
+        }
+      }
+
+      // 2. Account-scoped local cache, or generic storage fallback (synchronous)
+      if (!applied && typeof window !== 'undefined') {
+        try {
+          const accountCached = localStorage.getItem(`wingfucat_theme_${userId}`);
+          if (accountCached) {
+            const parsed = parseThemeFromData(JSON.parse(accountCached));
+            if (parsed) {
+              applyTheme(parsed, userId);
+              applied = true;
+            }
+          } else {
+            const genericCached = localStorage.getItem(STORAGE_KEY);
+            if (genericCached) {
+              const parsed = parseThemeFromData(JSON.parse(genericCached));
+              if (parsed) {
+                applyTheme(parsed);
+                applied = true;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 3. Fallback to clean default if neither exists yet (synchronous)
+      if (!applied) {
+        applyTheme(getDefaultTheme());
+      }
+
+      // 4. Subscribe to realtime updates for this user record (cross-device sync)
+      if (typeof pb.collection === 'function') {
+        try {
+          const usersCol = pb.collection('users');
+          if (usersCol && typeof usersCol.subscribe === 'function') {
+            const maybePromise = usersCol.subscribe(userId, (e: any) => {
+              if (e.action === 'update' && e.record?.theme_settings) {
+                const parsed = parseThemeFromData(e.record.theme_settings);
+                if (parsed) {
+                  applyTheme(parsed, userId);
+                }
+              }
+            });
+            Promise.resolve(maybePromise).then((unsub: any) => {
+              if (isMounted) {
+                unsubscribePb = unsub;
+              } else if (typeof unsub === 'function') {
+                unsub();
+              }
+            }).catch(() => {});
+          }
+        } catch (_) {}
+      }
+
+      // 5. Cloud fetch from PocketBase in background to guarantee latest settings
+      if (typeof pb.collection === 'function') {
+        try {
+          const usersCol = pb.collection('users');
+          if (usersCol && typeof usersCol.getOne === 'function') {
+            usersCol.getOne(userId).then((freshUser: any) => {
+              if (!isMounted) return;
+              if (freshUser?.theme_settings) {
+                const parsed = parseThemeFromData(freshUser.theme_settings);
+                if (parsed) {
+                  applyTheme(parsed, userId);
+                }
+              }
+            }).catch(() => {});
+          }
+        } catch (_) {}
+      }
+    };
+
+    // Initial sync for currently authenticated user
+    if (pb.authStore?.record?.id) {
+      syncUserTheme(pb.authStore.record);
     }
+
+    // Subscribe to authStore changes (login, logout, account switch)
+    let unsubscribeAuth: (() => void) | undefined;
+    if (typeof pb.authStore?.onChange === 'function') {
+      unsubscribeAuth = pb.authStore.onChange((_token: string, record: any) => {
+        syncUserTheme(record);
+      });
+    }
+
+    return () => {
+      isMounted = false;
+      if (unsubscribeAuth) {
+        try {
+          unsubscribeAuth();
+        } catch (_) {}
+      }
+      if (unsubscribePb) {
+        try {
+          unsubscribePb();
+        } catch (_) {}
+      }
+    };
   }, []);
 
   const value = useMemo(
