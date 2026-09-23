@@ -6,6 +6,7 @@ import { MessageComposer } from './components/MessageComposer';
 import { Header, type PartnerInfo } from './components/Header';
 import { ArchiveModal } from './components/ArchiveModal';
 import { pb } from './lib/pocketbase';
+import { parseDate } from './utils/date';
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -34,10 +35,10 @@ function AuthenticatedApp() {
     };
   }, []);
 
-  // Periodic tick to re-evaluate partner online status smoothly
+  // Periodic tick every 5s to re-evaluate partner online & typing status smoothly
   const [, setPresenceTick] = useState<number>(0);
   useEffect(() => {
-    const timer = setInterval(() => setPresenceTick((t) => t + 1), 10000);
+    const timer = setInterval(() => setPresenceTick((t) => t + 1), 5000);
     return () => clearInterval(timer);
   }, []);
 
@@ -45,44 +46,68 @@ function AuthenticatedApp() {
   useEffect(() => {
     if (!user) return;
 
-    const sendHeartbeat = async (isOffline = false) => {
+    let heartbeatTimer: any = null;
+
+    const sendHeartbeat = async (isActive = true) => {
       try {
-        const timestamp = isOffline
-          ? new Date(Date.now() - 60000).toISOString()
-          : new Date().toISOString();
-        await pb.collection('users').update(user.id, { last_seen: timestamp });
+        const timestamp = isActive ? new Date().toISOString() : '';
+        await pb.collection('users').update(user.id, {
+          last_seen: timestamp,
+          ...(isActive ? {} : { typing_until: '' }),
+        });
       } catch (_) {}
     };
 
-    sendHeartbeat(false);
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      sendHeartbeat(true);
+    }
 
-    const interval = setInterval(() => {
+    heartbeatTimer = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        sendHeartbeat(false);
+        sendHeartbeat(true);
       }
-    }, 20000);
+    }, 12000);
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        sendHeartbeat(false);
-      } else {
         sendHeartbeat(true);
+      } else {
+        sendHeartbeat(false);
       }
     };
 
-    const handleUnload = () => {
-      sendHeartbeat(true);
+    const handlePageHide = () => {
+      sendHeartbeat(false);
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('beforeunload', handlePageHide);
 
     return () => {
-      clearInterval(interval);
+      clearInterval(heartbeatTimer);
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('beforeunload', handlePageHide);
+      sendHeartbeat(false);
     };
   }, [user]);
+
+  // Handle typing state broadcast
+  const handleTyping = useCallback(
+    async (isTyping: boolean) => {
+      if (!user) return;
+      try {
+        const typingTimestamp = isTyping
+          ? new Date(Date.now() + 4000).toISOString()
+          : '';
+        await pb.collection('users').update(user.id, {
+          typing_until: typingTimestamp,
+        });
+      } catch (_) {}
+    },
+    [user]
+  );
 
   // Fetch partner info and chat_settings
   useEffect(() => {
@@ -197,10 +222,11 @@ function AuthenticatedApp() {
     return <LoginView />;
   }
 
-  const isPartnerOnline = Boolean(
-    partner?.last_seen &&
-    Date.now() - new Date(partner.last_seen).getTime() < 45000
-  );
+  const lastSeenMs = parseDate(partner?.last_seen);
+  const isPartnerOnline = Boolean(lastSeenMs > 0 && Date.now() - lastSeenMs < 25000);
+
+  const typingUntilMs = parseDate(partner?.typing_until);
+  const isPartnerTyping = Boolean(typingUntilMs > 0 && typingUntilMs > Date.now());
 
   return (
     <div className="flex h-dvh flex-col bg-black text-white">
@@ -210,6 +236,7 @@ function AuthenticatedApp() {
         currentUser={user}
         isConnected={isConnected}
         isPartnerOnline={isPartnerOnline}
+        isPartnerTyping={isPartnerTyping}
         archivedAt={archivedAt}
         onArchive={handleArchive}
         onOpenArchive={() => setIsArchiveModalOpen(true)}
@@ -218,12 +245,19 @@ function AuthenticatedApp() {
 
       {/* Main chat thread */}
       <main className="flex-1 overflow-hidden flex flex-col">
-        <LiveMessageThread archivedAt={archivedAt} className="flex-1" />
+        <LiveMessageThread
+          archivedAt={archivedAt}
+          isPartnerTyping={isPartnerTyping}
+          className="flex-1"
+        />
       </main>
 
       {/* Message Composer */}
       <footer className="shrink-0">
-        <MessageComposer currentUserId={user.id} />
+        <MessageComposer
+          currentUserId={user.id}
+          onTyping={handleTyping}
+        />
       </footer>
 
       {/* Archive Viewer / Restore Modal */}

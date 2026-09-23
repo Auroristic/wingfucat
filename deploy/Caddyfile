@@ -5,6 +5,10 @@
         respond "Access denied" 403
     }
 
+    # Disable caching for HTML and manifest so updates are immediately loaded
+    @nocache path / /index.html /manifest.json
+    header @nocache Cache-Control "no-cache, no-store, must-revalidate"
+
     # Reverse proxy app & realtime SSE
     reverse_proxy 127.0.0.1:8090 {
         flush_interval -1

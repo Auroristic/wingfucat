@@ -8,12 +8,14 @@ import type { Message } from './MessageBubble';
 export interface MessageComposerProps {
   currentUserId?: string;
   onMessageSent?: (message: Message) => void;
+  onTyping?: (isTyping: boolean) => void;
   className?: string;
 }
 
 export function MessageComposer({
   currentUserId: propCurrentUserId,
   onMessageSent,
+  onTyping,
   className = '',
 }: MessageComposerProps) {
   const [text, setText] = useState<string>('');
@@ -62,10 +64,26 @@ export function MessageComposer({
     setErrorMessage(null);
   };
 
+  const lastTypingSentRef = useRef<number>(0);
+
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
+    const val = e.target.value;
+    setText(val);
     e.target.style.height = 'auto';
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+
+    if (onTyping) {
+      if (val.trim().length > 0) {
+        const now = Date.now();
+        if (now - lastTypingSentRef.current > 2000) {
+          lastTypingSentRef.current = now;
+          onTyping(true);
+        }
+      } else {
+        lastTypingSentRef.current = 0;
+        onTyping(false);
+      }
+    }
   };
 
   const handleSend = async () => {
@@ -78,6 +96,9 @@ export function MessageComposer({
       setErrorMessage('User session not authenticated');
       return;
     }
+
+    onTyping?.(false);
+    lastTypingSentRef.current = 0;
 
     setIsUploading(true);
     setErrorMessage(null);

@@ -53,6 +53,13 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
         required: false,
       });
     }
+    if (!existingUserFields.has('typing_until')) {
+      usersCollection.fields.push({
+        name: 'typing_until',
+        type: 'text',
+        required: false,
+      });
+    }
     usersCollection.indexes = usersCollection.indexes || [];
     if (!usersCollection.indexes.some(i => i.includes('username'))) {
       usersCollection.indexes.push('CREATE UNIQUE INDEX idx_users_username ON users (username) WHERE username != ""');
@@ -73,6 +80,13 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
       usersCollection.schema.push({
         name: 'last_seen',
         type: 'date',
+        required: false,
+      });
+    }
+    if (!existingUserFields.has('typing_until')) {
+      usersCollection.schema.push({
+        name: 'typing_until',
+        type: 'text',
         required: false,
       });
     }

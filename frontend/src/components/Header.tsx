@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
 import { useAuth } from '../context/AuthContext';
 import { pb } from '../lib/pocketbase';
+import { parseDate } from '../utils/date';
 
 export interface PartnerInfo {
   id: string;
@@ -9,6 +10,7 @@ export interface PartnerInfo {
   username?: string;
   avatar?: string;
   last_seen?: string;
+  typing_until?: string;
   [key: string]: any;
 }
 
@@ -25,6 +27,7 @@ export interface HeaderProps {
   currentUser?: CurrentUserInfo | null;
   isConnected?: boolean;
   isPartnerOnline?: boolean;
+  isPartnerTyping?: boolean;
   archivedAt?: string | null;
   onArchive?: () => void | Promise<void>;
   onOpenArchive?: () => void;
@@ -37,6 +40,7 @@ export function Header({
   currentUser: propCurrentUser,
   isConnected = true,
   isPartnerOnline,
+  isPartnerTyping,
   archivedAt,
   onArchive,
   onOpenArchive,
@@ -97,13 +101,17 @@ export function Header({
         : `${pb.baseUrl || ''}/api/files/users/${partner.id}/${partner.avatar}`)
     : null;
 
-  // Check if partner is online (last_seen within 45s)
+  // Check if partner is online (last_seen within 25s)
+  const lastSeenMs = parseDate(partner?.last_seen);
   const isOnline = isPartnerOnline !== undefined
     ? isPartnerOnline
-    : Boolean(
-        partner?.last_seen &&
-        Date.now() - new Date(partner.last_seen).getTime() < 45000
-      );
+    : Boolean(lastSeenMs > 0 && Date.now() - lastSeenMs < 25000);
+
+  // Check if partner is typing (typing_until is in the future)
+  const typingUntilMs = parseDate(partner?.typing_until);
+  const isTyping = isPartnerTyping !== undefined
+    ? isPartnerTyping
+    : Boolean(typingUntilMs > 0 && typingUntilMs > Date.now());
 
   return (
     <>
@@ -145,6 +153,13 @@ export function Header({
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                 Offline
+              </span>
+            ) : isTyping ? (
+              <span
+                data-testid="partner-typing"
+                className="text-[10px] text-emerald-400 font-medium animate-pulse"
+              >
+                typing...
               </span>
             ) : (
               <span

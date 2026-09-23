@@ -80,4 +80,17 @@ describe('MessageThread Component', () => {
     rerender(<MessageThread messages={updatedMessages} isLoading={false} currentUserId="usr_me" />);
     expect(scrollIntoViewMock).toHaveBeenCalledTimes(2);
   });
+
+  it('renders typing indicator bubble when isPartnerTyping is true', () => {
+    render(
+      <MessageThread
+        messages={mockMessages}
+        isLoading={false}
+        isPartnerTyping={true}
+        currentUserId="usr_me"
+      />
+    );
+
+    expect(screen.getByTestId('partner-typing-bubble')).toBeInTheDocument();
+  });
 });

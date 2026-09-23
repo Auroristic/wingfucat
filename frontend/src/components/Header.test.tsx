@@ -70,6 +70,24 @@ describe('Header Component', () => {
     expect(screen.getByText('Online')).toBeInTheDocument();
   });
 
+  it('renders typing indicator in header when partner is typing', () => {
+    render(
+      <Header
+        partner={{
+          id: 'partner-1',
+          username: 'sweetheart',
+          display_name: 'Sweetheart',
+          last_seen: new Date().toISOString(),
+        }}
+        isConnected={true}
+        isPartnerTyping={true}
+      />
+    );
+
+    expect(screen.getByTestId('partner-typing')).toBeInTheDocument();
+    expect(screen.getByText('typing...')).toBeInTheDocument();
+  });
+
   it('renders offline connection indicator when isConnected is false', () => {
     render(
       <Header
