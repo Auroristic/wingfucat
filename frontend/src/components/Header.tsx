@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
 import { useAuth } from '../context/AuthContext';
 import { pb } from '../lib/pocketbase';
-import { parseDate } from '../utils/date';
+import { parseDate, toPocketBaseDate } from '../utils/date';
 
 export interface PartnerInfo {
   id: string;
@@ -80,7 +80,7 @@ export function Header({
         const settings = await pb.collection('chat_settings').getFullList();
         if (settings[0]) {
           await pb.collection('chat_settings').update(settings[0].id, {
-            archived_at: new Date().toISOString(),
+            archived_at: toPocketBaseDate(new Date()),
           });
         }
       }

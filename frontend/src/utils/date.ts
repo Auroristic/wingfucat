@@ -9,3 +9,16 @@ export function parseDate(dateStr?: string | null): number {
   const time = new Date(normalized).getTime();
   return isNaN(time) ? 0 : time;
 }
+
+/**
+ * Convert a Date, epoch timestamp, or date string into PocketBase's standard
+ * space-separated datetime string ('YYYY-MM-DD HH:MM:SS.000Z').
+ */
+export function toPocketBaseDate(dateInput?: Date | string | number | null): string {
+  if (!dateInput) return '';
+  const d = dateInput instanceof Date
+    ? dateInput
+    : new Date(typeof dateInput === 'string' && dateInput.includes(' ') ? dateInput.replace(' ', 'T') : dateInput);
+  if (isNaN(d.getTime())) return '';
+  return d.toISOString().replace('T', ' ');
+}

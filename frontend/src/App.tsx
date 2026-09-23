@@ -6,7 +6,7 @@ import { MessageComposer } from './components/MessageComposer';
 import { Header, type PartnerInfo } from './components/Header';
 import { ArchiveModal } from './components/ArchiveModal';
 import { pb } from './lib/pocketbase';
-import { parseDate } from './utils/date';
+import { parseDate, toPocketBaseDate } from './utils/date';
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -176,22 +176,22 @@ function AuthenticatedApp() {
   }, [user]);
 
   const handleArchive = useCallback(async () => {
-    const nowIso = new Date().toISOString();
+    const nowPbDate = toPocketBaseDate(new Date());
     try {
       if (chatSettingsRecordId) {
         await pb.collection('chat_settings').update(chatSettingsRecordId, {
-          archived_at: nowIso,
+          archived_at: nowPbDate,
         });
       } else {
         const settings = await pb.collection('chat_settings').getFullList();
         if (settings[0]) {
           setChatSettingsRecordId(settings[0].id);
           await pb.collection('chat_settings').update(settings[0].id, {
-            archived_at: nowIso,
+            archived_at: nowPbDate,
           });
         }
       }
-      setArchivedAt(nowIso);
+      setArchivedAt(nowPbDate);
     } catch (err) {
       console.error('Failed to archive chat:', err);
     }

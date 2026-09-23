@@ -68,7 +68,7 @@ describe('useMessages hook', () => {
     });
 
     expect(pb.collection('messages').getFullList).toHaveBeenCalledWith({
-      filter: `created >= "${archivedTimestamp}"`,
+      filter: 'created >= "2026-09-22 12:00:00.000Z"',
       sort: 'created',
     });
   });

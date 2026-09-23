@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Icon } from './Icon';
 import { MessageBubble, type Message } from './MessageBubble';
 import { pb } from '../lib/pocketbase';
+import { toPocketBaseDate } from '../utils/date';
 
 export interface ArchiveModalProps {
   isOpen: boolean;
@@ -37,11 +38,17 @@ export function ArchiveModal({
   useEffect(() => {
     if (!isOpen || propMessages !== undefined) return;
 
+    if (!archivedAt) {
+      setArchivedMessages([]);
+      return;
+    }
+
     let isMounted = true;
     const fetchArchive = async () => {
       setIsLoading(true);
       try {
-        const filter = archivedAt ? `created < "${archivedAt}"` : '';
+        const pbArchivedAt = toPocketBaseDate(archivedAt);
+        const filter = `created < "${pbArchivedAt}"`;
         const records = await pb.collection('messages').getFullList<Message>({
           filter,
           sort: 'created',

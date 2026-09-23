@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RecordSubscription } from 'pocketbase';
 import { pb } from '../lib/pocketbase';
 import type { Message } from '../components/MessageBubble';
+import { parseDate, toPocketBaseDate } from '../utils/date';
 
 export interface UseMessagesOptions {
   archivedAt?: string | null;
@@ -98,7 +99,8 @@ export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult
         }
       }
 
-      const filter = resolvedArchivedAt ? `created >= "${resolvedArchivedAt}"` : '';
+      const pbArchivedAt = resolvedArchivedAt ? toPocketBaseDate(resolvedArchivedAt) : '';
+      const filter = pbArchivedAt ? `created >= "${pbArchivedAt}"` : '';
       const records = await pb.collection('messages').getFullList<Message>({
         filter,
         sort: 'created',
@@ -126,8 +128,8 @@ export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult
       if (!isSubscribed) return;
 
       if (e.action === 'create') {
-        // Apply archive filter if set
-        if (explicitArchivedAt && e.record.created < explicitArchivedAt) {
+        // Apply archive filter if set using numerical epoch comparison
+        if (explicitArchivedAt && parseDate(e.record.created) < parseDate(explicitArchivedAt)) {
           return;
         }
 
