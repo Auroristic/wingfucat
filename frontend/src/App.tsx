@@ -425,6 +425,7 @@ function AuthenticatedApp() {
         onClose={() => setIsArchiveModalOpen(false)}
         archivedAt={archivedAt}
         onRestore={handleRestore}
+        onCleared={() => setArchivedAt('')}
         currentUserId={user.id}
       />
 
