@@ -7,10 +7,37 @@
   --theme-bg-primary: #000000;
   --theme-bg-secondary: #09090b;
   --theme-bg-surface: #18181b;
+  --theme-bg-glass: rgba(9, 9, 11, 0.8);
   --theme-border-subtle: #27272a;
   --theme-text-primary: #ffffff;
   --theme-text-secondary: #a1a1aa;
   --theme-accent: #10b981;
+  --theme-wallpaper-dim: 0.35;
+  --theme-wallpaper-blur: 0px;
+}
+
+/* Cross-browser scrollbars: Firefox + WebKit */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-border-subtle) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--theme-border-subtle);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-accent);
 }
 
 body {

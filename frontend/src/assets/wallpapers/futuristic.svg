@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="future-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#060919" />
+      <stop offset="50%" stop-color="#0c1232" />
+      <stop offset="100%" stop-color="#050816" />
+    </linearGradient>
+    <radialGradient id="future-glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#4f7cff" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#0a0e27" stop-opacity="0" />
+    </radialGradient>
+    <pattern id="tech-grid" width="80" height="80" patternUnits="userSpaceOnUse">
+      <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#25356e" stroke-width="0.8" opacity="0.35" />
+      <circle cx="0" cy="0" r="1.5" fill="#4f7cff" opacity="0.4" />
+    </pattern>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#future-bg)" />
+  <rect width="1920" height="1080" fill="url(#tech-grid)" />
+  <rect width="1920" height="1080" fill="url(#future-glow)" />
+
+  <!-- Diagonal high-tech accent streaks -->
+  <line x1="0" y1="200" x2="1920" y2="600" stroke="#4f7cff" stroke-width="0.8" opacity="0.18" />
+  <line x1="0" y1="220" x2="1920" y2="620" stroke="#a855f7" stroke-width="0.5" opacity="0.15" />
+</svg>

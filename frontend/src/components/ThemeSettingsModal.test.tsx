@@ -52,4 +52,25 @@ describe('ThemeSettingsModal Component', () => {
     fireEvent.click(closeBtn);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it('renders wallpaper controls and updates wallpaper via URL input', () => {
+    render(
+      <ThemeProvider>
+        <ThemeSettingsModal isOpen={true} onClose={vi.fn()} />
+      </ThemeProvider>
+    );
+
+    expect(screen.getByText(/wallpaper & atmosphere/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /upload image/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/paste wallpaper url/i)).toBeInTheDocument();
+
+    const urlInput = screen.getByPlaceholderText(/paste wallpaper url/i);
+    fireEvent.change(urlInput, { target: { value: 'https://example.com/custom.jpg' } });
+
+    const applyBtn = screen.getByRole('button', { name: /apply/i });
+    fireEvent.click(applyBtn);
+
+    const preview = screen.getByTestId('theme-preview-box');
+    expect(preview.style.backgroundImage).toContain('https://example.com/custom.jpg');
+  });
 });

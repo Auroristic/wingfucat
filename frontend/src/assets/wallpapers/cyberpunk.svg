@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cyber-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#050508" />
+      <stop offset="60%" stop-color="#090a14" />
+      <stop offset="100%" stop-color="#140a1c" />
+    </linearGradient>
+    <linearGradient id="cyber-grid-line" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0" />
+      <stop offset="60%" stop-color="#00f0ff" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#ff003c" stop-opacity="0.6" />
+    </linearGradient>
+    <radialGradient id="cyber-glow" cx="50%" cy="65%" r="60%">
+      <stop offset="0%" stop-color="#ff003c" stop-opacity="0.2" />
+      <stop offset="50%" stop-color="#00f0ff" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#050508" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#cyber-bg)" />
+  <rect width="1920" height="1080" fill="url(#cyber-glow)" />
+
+  <!-- Neon Horizon line -->
+  <line x1="0" y1="650" x2="1920" y2="650" stroke="#00f0ff" stroke-width="2" opacity="0.6" />
+  <line x1="0" y1="652" x2="1920" y2="652" stroke="#ff003c" stroke-width="1" opacity="0.8" />
+
+  <!-- Perspective grid floor lines -->
+  <g stroke="url(#cyber-grid-line)" stroke-width="1.2">
+    <line x1="960" y1="650" x2="-200" y2="1080" />
+    <line x1="960" y1="650" x2="100" y2="1080" />
+    <line x1="960" y1="650" x2="400" y2="1080" />
+    <line x1="960" y1="650" x2="700" y2="1080" />
+    <line x1="960" y1="650" x2="960" y2="1080" />
+    <line x1="960" y1="650" x2="1220" y2="1080" />
+    <line x1="960" y1="650" x2="1520" y2="1080" />
+    <line x1="960" y1="650" x2="1820" y2="1080" />
+    <line x1="960" y1="650" x2="2120" y2="1080" />
+
+    <!-- Horizontal grid lines with perspective spacing -->
+    <line x1="0" y1="670" x2="1920" y2="670" opacity="0.2" />
+    <line x1="0" y1="700" x2="1920" y2="700" opacity="0.25" />
+    <line x1="0" y1="745" x2="1920" y2="745" opacity="0.3" />
+    <line x1="0" y1="805" x2="1920" y2="805" opacity="0.35" />
+    <line x1="0" y1="885" x2="1920" y2="885" opacity="0.45" />
+    <line x1="0" y1="985" x2="1920" y2="985" opacity="0.55" />
+  </g>
+
+  <!-- Distant subtle synthwave sun arc -->
+  <path d="M 810 650 A 150 150 0 0 1 1110 650" fill="none" stroke="#ff003c" stroke-width="2.5" opacity="0.5" />
+</svg>

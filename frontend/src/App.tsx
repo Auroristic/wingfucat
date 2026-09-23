@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { LoginView } from './components/LoginView';
 import { LiveMessageThread } from './components/MessageThread';
 import { MessageComposer } from './components/MessageComposer';
@@ -323,40 +323,69 @@ function AuthenticatedApp() {
     ? Boolean(partner.is_typing && !isPartnerTypingExpired)
     : Boolean(typingUntilMs > 0 && typingUntilMs > Date.now());
 
+  const { theme } = useTheme();
+
   return (
-    <div className="flex h-dvh flex-col bg-black text-white">
-      {/* Persistent Top Header */}
-      <Header
-        partner={partner}
-        currentUser={user}
-        isConnected={isConnected}
-        isPartnerOnline={isPartnerOnline}
-        isPartnerTyping={isPartnerTyping}
-        archivedAt={archivedAt}
-        onArchive={handleArchive}
-        onOpenArchive={() => setIsArchiveModalOpen(true)}
-        onOpenThemeSettings={() => setIsThemeModalOpen(true)}
-        onLogout={handleLogout}
+    <div className="relative flex h-dvh flex-col bg-black text-white overflow-hidden">
+      {/* Full-bleed wallpaper background */}
+      {theme.wallpaperUrl && (
+        <div
+          data-testid="theme-wallpaper-bg"
+          aria-hidden="true"
+          className="fixed inset-0 pointer-events-none z-0 bg-cover bg-center transition-all duration-500"
+          style={{
+            backgroundImage: `url(${theme.wallpaperUrl})`,
+            filter: theme.wallpaperBlur > 0 ? `blur(${theme.wallpaperBlur}px)` : undefined,
+            transform: theme.wallpaperBlur > 0 ? 'scale(1.04)' : undefined,
+          }}
+        />
+      )}
+
+      {/* Theme dimming overlay */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-300"
+        style={{
+          backgroundColor: 'var(--theme-bg-primary)',
+          opacity: 'var(--theme-wallpaper-dim, 0.35)',
+        }}
       />
 
-      {/* Main chat thread */}
-      <main className="flex-1 overflow-hidden flex flex-col">
-        <LiveMessageThread
+      {/* Main app content floating over background */}
+      <div className="relative z-10 flex h-full flex-col overflow-hidden">
+        {/* Persistent Top Header */}
+        <Header
+          partner={partner}
+          currentUser={user}
+          isConnected={isConnected}
+          isPartnerOnline={isPartnerOnline}
+          isPartnerTyping={isPartnerTyping}
           archivedAt={archivedAt}
-          isPartnerTyping={isPartnerTyping}
-          className="flex-1"
+          onArchive={handleArchive}
+          onOpenArchive={() => setIsArchiveModalOpen(true)}
+          onOpenThemeSettings={() => setIsThemeModalOpen(true)}
+          onLogout={handleLogout}
         />
-      </main>
 
-      {/* Message Composer */}
-      <footer className="shrink-0">
-        <MessageComposer
-          currentUserId={userId}
-          onTyping={handleTyping}
-          isPartnerTyping={isPartnerTyping}
-          partnerName={partner?.display_name || partner?.username || 'Partner'}
-        />
-      </footer>
+        {/* Main chat thread */}
+        <main className="flex-1 overflow-hidden flex flex-col bg-transparent">
+          <LiveMessageThread
+            archivedAt={archivedAt}
+            isPartnerTyping={isPartnerTyping}
+            className="flex-1"
+          />
+        </main>
+
+        {/* Message Composer */}
+        <footer className="shrink-0 bg-transparent">
+          <MessageComposer
+            currentUserId={userId}
+            onTyping={handleTyping}
+            isPartnerTyping={isPartnerTyping}
+            partnerName={partner?.display_name || partner?.username || 'Partner'}
+          />
+        </footer>
+      </div>
 
       {/* Archive Viewer / Restore Modal */}
       <ArchiveModal

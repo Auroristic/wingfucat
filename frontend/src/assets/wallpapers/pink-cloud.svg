@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2a1424" />
+      <stop offset="40%" stop-color="#3b1a32" />
+      <stop offset="100%" stop-color="#1f0e1a" />
+    </linearGradient>
+    <radialGradient id="glow1" cx="30%" cy="25%" r="45%">
+      <stop offset="0%" stop-color="#ff9ec6" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#ff9ec6" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glow2" cx="75%" cy="65%" r="50%">
+      <stop offset="0%" stop-color="#f48fb1" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#f48fb1" stop-opacity="0" />
+    </radialGradient>
+    <!-- Cute Bow Def -->
+    <g id="kawaii-bow">
+      <!-- Left loop -->
+      <path d="M-6 0 C-22 -14, -26 14, -6 6 Z" fill="#ff4081" opacity="0.85"/>
+      <!-- Right loop -->
+      <path d="M6 0 C22 -14, 26 14, 6 6 Z" fill="#ff4081" opacity="0.85"/>
+      <!-- Center knot -->
+      <circle cx="0" cy="2" r="5" fill="#ff80ab"/>
+      <!-- Ribbon tails -->
+      <path d="M-3 6 C-8 16, -14 20, -10 22 C-6 18, -2 12, -1 7 Z" fill="#f50057" opacity="0.75"/>
+      <path d="M3 6 C8 16, 14 20, 10 22 C6 18, 2 12, 1 7 Z" fill="#f50057" opacity="0.75"/>
+    </g>
+    <!-- Sparkle Star Def -->
+    <g id="sparkle">
+      <path d="M0 -12 C1 -4, 4 -1, 12 0 C4 1, 1 4, 0 12 C-1 4, -4 1, -12 0 C-4 -1, -1 -4, 0 -12 Z" fill="#ffe4ec" opacity="0.8"/>
+    </g>
+    <!-- Cute Heart Def -->
+    <g id="kawaii-heart">
+      <path d="M0 4 A4 4 0 0 0 -8 -4 A4 4 0 0 0 -8 4 L0 12 L8 4 A4 4 0 0 0 8 -4 A4 4 0 0 0 0 4 Z" fill="#ff80ab" opacity="0.6"/>
+    </g>
+  </defs>
+
+  <!-- Base background -->
+  <rect width="1920" height="1080" fill="url(#bg)" />
+  <rect width="1920" height="1080" fill="url(#glow1)" />
+  <rect width="1920" height="1080" fill="url(#glow2)" />
+
+  <!-- Fluffy Cloud 1 (Top Left) -->
+  <g fill="#ffc1e3" opacity="0.18">
+    <circle cx="280" cy="180" r="110" />
+    <circle cx="390" cy="150" r="130" />
+    <circle cx="510" cy="190" r="100" />
+    <circle cx="370" cy="240" r="120" />
+    <circle cx="240" cy="230" r="80" />
+  </g>
+
+  <!-- Fluffy Cloud 2 (Bottom Right) -->
+  <g fill="#ffb2dd" opacity="0.15">
+    <circle cx="1650" cy="850" r="140" />
+    <circle cx="1520" cy="880" r="110" />
+    <circle cx="1780" cy="900" r="100" />
+    <circle cx="1660" cy="950" r="130" />
+  </g>
+
+  <!-- Fluffy Cloud 3 (Mid Left) -->
+  <g fill="#ffb2dd" opacity="0.12">
+    <circle cx="150" cy="720" r="90" />
+    <circle cx="230" cy="700" r="110" />
+    <circle cx="320" cy="730" r="80" />
+  </g>
+
+  <!-- Kawaii Bows scattered gently -->
+  <use href="#kawaii-bow" x="380" y="130" transform="scale(1.2)" />
+  <use href="#kawaii-bow" x="1600" y="820" transform="scale(1.4) rotate(-10 1600 820)" />
+  <use href="#kawaii-bow" x="1250" y="220" transform="scale(0.9) rotate(15 1250 220)" />
+  <use href="#kawaii-bow" x="220" y="680" transform="scale(1.1) rotate(-8 220 680)" />
+
+  <!-- Sparkles -->
+  <use href="#sparkle" x="320" y="320" transform="scale(1.2)" />
+  <use href="#sparkle" x="480" y="120" transform="scale(0.9)" />
+  <use href="#sparkle" x="800" y="160" transform="scale(1.5)" />
+  <use href="#sparkle" x="1100" y="340" transform="scale(1)" />
+  <use href="#sparkle" x="1450" y="180" transform="scale(1.3)" />
+  <use href="#sparkle" x="1750" y="720" transform="scale(1.1)" />
+  <use href="#sparkle" x="1380" y="880" transform="scale(1.4)" />
+  <use href="#sparkle" x="650" y="820" transform="scale(1.2)" />
+
+  <!-- Hearts -->
+  <use href="#kawaii-heart" x="520" y="260" transform="scale(1.2) rotate(15 520 260)" />
+  <use href="#kawaii-heart" x="1320" y="160" transform="scale(1.1) rotate(-12 1320 160)" />
+  <use href="#kawaii-heart" x="1520" y="740" transform="scale(1.3) rotate(8 1520 740)" />
+  <use href="#kawaii-heart" x="350" y="820" transform="scale(1.4) rotate(-20 350 820)" />
+  <use href="#kawaii-heart" x="980" y="920" transform="scale(1) rotate(10 980 920)" />
+</svg>

@@ -124,7 +124,10 @@ export function Header({
   return (
     <>
       <header
-        className={`flex h-14 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 select-none ${className}`}
+        className={`flex h-14 shrink-0 items-center justify-between px-4 select-none backdrop-blur-md transition-colors duration-200 ${className}`}
+        style={{
+          backgroundColor: 'var(--theme-bg-glass)',
+        }}
       >
         {/* Left: Partner info & Online status */}
         <div className="flex items-center gap-3">
@@ -189,7 +192,7 @@ export function Header({
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {currentUser && (
             <span className="hidden lg:inline text-xs text-zinc-400 mr-1">
               {currentUser.display_name || currentUser.username || currentUser.email}
@@ -202,7 +205,11 @@ export function Header({
               type="button"
               onClick={onOpenArchive}
               aria-label="View archive"
-              className="flex items-center gap-1 rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-zinc-200 hover:border-zinc-600 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900/60 px-2.5 py-1 text-xs font-medium text-zinc-200 hover:border-zinc-500 hover:text-white transition-colors cursor-pointer backdrop-blur-xs"
+              style={{
+                backgroundColor: 'var(--theme-bg-surface)',
+                borderColor: 'var(--theme-border-subtle)',
+              }}
             >
               <Icon name="archive" className="text-base" />
               <span className="hidden sm:inline">View Archive</span>
@@ -216,9 +223,14 @@ export function Header({
               onClick={onOpenThemeSettings}
               aria-label="Appearance & Themes"
               title="Appearance & Themes"
-              className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900/60 px-2.5 py-1 text-xs font-medium text-zinc-200 hover:border-zinc-600 hover:text-white transition-colors cursor-pointer backdrop-blur-xs"
+              style={{
+                backgroundColor: 'var(--theme-bg-surface)',
+                borderColor: 'var(--theme-border-subtle)',
+                color: 'var(--theme-text-primary)',
+              }}
             >
-              <Icon name="palette" className="text-base" />
+              <Icon name="palette" className="text-base text-inherit" />
               <span className="hidden sm:inline">Theme</span>
             </button>
           )}
@@ -228,7 +240,11 @@ export function Header({
             type="button"
             onClick={() => setIsConfirmOpen(true)}
             aria-label="Archive chat"
-            className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900/60 px-2.5 py-1 text-xs font-medium text-zinc-300 hover:border-zinc-600 hover:text-white transition-colors cursor-pointer backdrop-blur-xs"
+            style={{
+              backgroundColor: 'var(--theme-bg-surface)',
+              borderColor: 'var(--theme-border-subtle)',
+            }}
           >
             <Icon name="archive" className="text-base" />
             <span className="hidden sm:inline">Archive</span>
@@ -239,7 +255,11 @@ export function Header({
             type="button"
             onClick={handleLogout}
             aria-label="Log out"
-            className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900/60 px-2.5 py-1 text-xs font-medium text-zinc-300 hover:border-zinc-600 hover:text-white transition-colors cursor-pointer backdrop-blur-xs"
+            style={{
+              backgroundColor: 'var(--theme-bg-surface)',
+              borderColor: 'var(--theme-border-subtle)',
+            }}
           >
             <Icon name="logout" className="text-base" />
             <span>Log out</span>

@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { pb } from '../lib/pocketbase';
 
+import pinkCloudWp from '../assets/wallpapers/pink-cloud.svg';
+import cyberpunkWp from '../assets/wallpapers/cyberpunk.svg';
+import lavenderDreamWp from '../assets/wallpapers/lavender-dream.svg';
+import futuristicWp from '../assets/wallpapers/futuristic.svg';
+import minimalistOledWp from '../assets/wallpapers/minimalist-oled.svg';
+
 export type ThemePresetId =
   | 'minimalist-oled'
   | 'pink-cloud'
@@ -19,10 +25,12 @@ export interface ThemeConfig {
   bodyFont: string;
   bubbleStyle: BubbleStyle;
   typingAnimation: TypingAnimation;
+  defaultWallpaper: string;
   colors: {
     bgPrimary: string;
     bgSecondary: string;
     bgSurface: string;
+    bgGlass: string;
     borderSubtle: string;
     textPrimary: string;
     textSecondary: string;
@@ -43,10 +51,12 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
     bodyFont: 'Inter',
     bubbleStyle: 'rounded',
     typingAnimation: 'dots',
+    defaultWallpaper: minimalistOledWp,
     colors: {
       bgPrimary: '#000000',
       bgSecondary: '#09090b',
       bgSurface: '#18181b',
+      bgGlass: 'rgba(9, 9, 11, 0.78)',
       borderSubtle: '#27272a',
       textPrimary: '#ffffff',
       textSecondary: '#a1a1aa',
@@ -60,15 +70,17 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
   'pink-cloud': {
     id: 'pink-cloud',
     name: 'Pink Cloud',
-    description: 'Soft pastel pink, blush and rose with bouncy rounded bubbles and pulsing hearts',
+    description: 'Pastel pink, fluffy clouds, cute bows, and pulsing hearts',
     headingFont: 'Baloo 2',
     bodyFont: 'Nunito',
     bubbleStyle: 'soft-cloud',
     typingAnimation: 'hearts',
+    defaultWallpaper: pinkCloudWp,
     colors: {
       bgPrimary: '#1a1017',
       bgSecondary: '#241621',
       bgSurface: '#341f2e',
+      bgGlass: 'rgba(36, 22, 33, 0.78)',
       borderSubtle: '#4f2e46',
       textPrimary: '#fff0f5',
       textSecondary: '#f8a5c2',
@@ -87,10 +99,12 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
     bodyFont: 'Space Grotesk',
     bubbleStyle: 'sharp',
     typingAnimation: 'neon-pulse',
+    defaultWallpaper: cyberpunkWp,
     colors: {
       bgPrimary: '#050508',
       bgSecondary: '#0c0d14',
       bgSurface: '#151622',
+      bgGlass: 'rgba(12, 13, 20, 0.82)',
       borderSubtle: '#282b42',
       textPrimary: '#00f0ff',
       textSecondary: '#ff003c',
@@ -109,10 +123,12 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
     bodyFont: 'Poppins',
     bubbleStyle: 'rounded',
     typingAnimation: 'dots',
+    defaultWallpaper: lavenderDreamWp,
     colors: {
       bgPrimary: '#0e0a1c',
       bgSecondary: '#16102c',
       bgSurface: '#211842',
+      bgGlass: 'rgba(22, 16, 44, 0.8)',
       borderSubtle: '#372866',
       textPrimary: '#f5f3ff',
       textSecondary: '#c4b5fd',
@@ -131,10 +147,12 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
     bodyFont: 'Exo 2',
     bubbleStyle: 'glass',
     typingAnimation: 'glow-bar',
+    defaultWallpaper: futuristicWp,
     colors: {
       bgPrimary: '#0a0e27',
       bgSecondary: '#10163a',
       bgSurface: '#161f4a',
+      bgGlass: 'rgba(16, 22, 58, 0.82)',
       borderSubtle: '#26336e',
       textPrimary: '#e0e7ff',
       textSecondary: '#818cf8',
@@ -153,6 +171,9 @@ export interface ActiveTheme {
   bodyFont: string;
   bubbleStyle: BubbleStyle;
   typingAnimation: TypingAnimation;
+  wallpaperUrl: string;
+  wallpaperDim: number;
+  wallpaperBlur: number;
   colors: ThemeConfig['colors'];
 }
 
@@ -161,6 +182,9 @@ export interface ThemeContextType {
   setPreset: (presetId: ThemePresetId) => void;
   setBubbleStyle: (style: BubbleStyle) => void;
   setTypingAnimation: (anim: TypingAnimation) => void;
+  setWallpaper: (url: string | null) => void;
+  setWallpaperDim: (dim: number) => void;
+  setWallpaperBlur: (blur: number) => void;
   resetToDefault: () => void;
 }
 
@@ -182,6 +206,9 @@ const getInitialTheme = (): ActiveTheme => {
             bodyFont: base.bodyFont,
             bubbleStyle: parsed.bubbleStyle || base.bubbleStyle,
             typingAnimation: parsed.typingAnimation || base.typingAnimation,
+            wallpaperUrl: parsed.wallpaperUrl || base.defaultWallpaper,
+            wallpaperDim: typeof parsed.wallpaperDim === 'number' ? parsed.wallpaperDim : 35,
+            wallpaperBlur: typeof parsed.wallpaperBlur === 'number' ? parsed.wallpaperBlur : 0,
             colors: base.colors,
           };
         }
@@ -195,6 +222,9 @@ const getInitialTheme = (): ActiveTheme => {
     bodyFont: defaultPreset.bodyFont,
     bubbleStyle: defaultPreset.bubbleStyle,
     typingAnimation: defaultPreset.typingAnimation,
+    wallpaperUrl: defaultPreset.defaultWallpaper,
+    wallpaperDim: 35,
+    wallpaperBlur: 0,
     colors: defaultPreset.colors,
   };
 };
@@ -220,6 +250,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--theme-bg-primary', c.bgPrimary);
     root.style.setProperty('--theme-bg-secondary', c.bgSecondary);
     root.style.setProperty('--theme-bg-surface', c.bgSurface);
+    root.style.setProperty('--theme-bg-glass', c.bgGlass);
     root.style.setProperty('--theme-border-subtle', c.borderSubtle);
     root.style.setProperty('--theme-text-primary', c.textPrimary);
     root.style.setProperty('--theme-text-secondary', c.textSecondary);
@@ -228,24 +259,40 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--theme-bubble-user-text', c.bubbleUserText);
     root.style.setProperty('--theme-bubble-partner-bg', c.bubblePartnerBg);
     root.style.setProperty('--theme-bubble-partner-text', c.bubblePartnerText);
+    root.style.setProperty('--theme-wallpaper-dim', String(theme.wallpaperDim / 100));
+    root.style.setProperty('--theme-wallpaper-blur', `${theme.wallpaperBlur}px`);
   }, [theme]);
 
-  // Sync to localStorage and PocketBase account
+  // Sync to localStorage and PocketBase account safely
   const persistTheme = useCallback((updated: ActiveTheme) => {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (_) {}
+      } catch (_) {
+        // Quota safety: if localStorage fails (e.g. quota limit), retry without custom wallpaper
+        try {
+          const fallback = { ...updated, wallpaperUrl: THEME_PRESETS[updated.id].defaultWallpaper };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
+        } catch (__) {}
+      }
     }
 
     const currentUserId = pb.authStore.record?.id;
     if (currentUserId) {
       try {
+        // Limit stored wallpaper size in DB to avoid payload limits
+        const safeWallpaper = updated.wallpaperUrl && updated.wallpaperUrl.length > 300000
+          ? null
+          : updated.wallpaperUrl;
+
         pb.collection('users').update(currentUserId, {
           theme_settings: {
             id: updated.id,
             bubbleStyle: updated.bubbleStyle,
             typingAnimation: updated.typingAnimation,
+            wallpaperUrl: safeWallpaper,
+            wallpaperDim: updated.wallpaperDim,
+            wallpaperBlur: updated.wallpaperBlur,
           },
         }).catch(() => {});
       } catch (_) {}
@@ -261,6 +308,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       bodyFont: preset.bodyFont,
       bubbleStyle: preset.bubbleStyle,
       typingAnimation: preset.typingAnimation,
+      wallpaperUrl: preset.defaultWallpaper,
+      wallpaperDim: 35,
+      wallpaperBlur: 0,
       colors: preset.colors,
     };
     setTheme(next);
@@ -283,6 +333,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   }, [persistTheme]);
 
+  const setWallpaper = useCallback((url: string | null) => {
+    setTheme((prev) => {
+      const base = THEME_PRESETS[prev.id];
+      const next = { ...prev, wallpaperUrl: url || base.defaultWallpaper };
+      persistTheme(next);
+      return next;
+    });
+  }, [persistTheme]);
+
+  const setWallpaperDim = useCallback((dim: number) => {
+    setTheme((prev) => {
+      const next = { ...prev, wallpaperDim: Math.max(0, Math.min(90, dim)) };
+      persistTheme(next);
+      return next;
+    });
+  }, [persistTheme]);
+
+  const setWallpaperBlur = useCallback((blur: number) => {
+    setTheme((prev) => {
+      const next = { ...prev, wallpaperBlur: Math.max(0, Math.min(20, blur)) };
+      persistTheme(next);
+      return next;
+    });
+  }, [persistTheme]);
+
   const resetToDefault = useCallback(() => {
     setPreset('minimalist-oled');
   }, [setPreset]);
@@ -298,6 +373,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         bodyFont: base.bodyFont,
         bubbleStyle: userSettings.bubbleStyle || base.bubbleStyle,
         typingAnimation: userSettings.typingAnimation || base.typingAnimation,
+        wallpaperUrl: userSettings.wallpaperUrl || base.defaultWallpaper,
+        wallpaperDim: typeof userSettings.wallpaperDim === 'number' ? userSettings.wallpaperDim : 35,
+        wallpaperBlur: typeof userSettings.wallpaperBlur === 'number' ? userSettings.wallpaperBlur : 0,
         colors: base.colors,
       });
     }
@@ -309,19 +387,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setPreset,
       setBubbleStyle,
       setTypingAnimation,
+      setWallpaper,
+      setWallpaperDim,
+      setWallpaperBlur,
       resetToDefault,
     }),
-    [theme, setPreset, setBubbleStyle, setTypingAnimation, resetToDefault]
+    [theme, setPreset, setBubbleStyle, setTypingAnimation, setWallpaper, setWallpaperDim, setWallpaperBlur, resetToDefault]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 const defaultThemeValue: ThemeContextType = {
-  theme: THEME_PRESETS['minimalist-oled'],
+  theme: {
+    ...THEME_PRESETS['minimalist-oled'],
+    wallpaperUrl: THEME_PRESETS['minimalist-oled'].defaultWallpaper,
+    wallpaperDim: 35,
+    wallpaperBlur: 0,
+  },
   setPreset: () => {},
   setBubbleStyle: () => {},
   setTypingAnimation: () => {},
+  setWallpaper: () => {},
+  setWallpaperDim: () => {},
+  setWallpaperBlur: () => {},
   resetToDefault: () => {},
 };
 
