@@ -145,7 +145,7 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
     viewRule: '@request.auth.id != ""',
     createRule: '@request.auth.id != "" && @request.body.sender = @request.auth.id',
     updateRule: '@request.auth.id != "" && @request.auth.id != sender && @request.body.text:isset = false && @request.body.sender:isset = false && @request.body.attachment:isset = false && @request.body.media_type:isset = false && @request.body.duration:isset = false',
-    deleteRule: null,
+    deleteRule: '@request.auth.id != ""',
   };
 
   const messagesFields = [

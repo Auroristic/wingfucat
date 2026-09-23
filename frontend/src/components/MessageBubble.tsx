@@ -145,14 +145,18 @@ export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleP
 
           <div
             className={`flex items-center gap-1 mt-1 text-[11px] select-none ${
-              isOwn ? 'justify-end text-zinc-500' : 'justify-start text-zinc-400'
+              isOwn ? 'justify-end opacity-80' : 'justify-start opacity-75'
             }`}
           >
             <span>{formatMessageTime(message.created)}</span>
             {isOwn && (
               <Icon
                 name={message.read_at ? 'done_all' : 'done'}
-                className={`text-sm ${message.read_at ? 'text-zinc-700' : 'text-zinc-400'}`}
+                className={`text-sm ${
+                  message.read_at
+                    ? (isTui ? 'text-[#00ff41] font-bold' : 'text-emerald-400 font-semibold opacity-100')
+                    : 'opacity-60 text-inherit'
+                }`}
               />
             )}
           </div>

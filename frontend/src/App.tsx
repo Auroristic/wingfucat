@@ -109,7 +109,7 @@ function AuthenticatedApp() {
         }
         visibilityOfflineTimer = setTimeout(() => {
           sendHeartbeat(false);
-        }, 3000);
+        }, 25000);
       }
     };
 

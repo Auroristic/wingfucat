@@ -124,4 +124,26 @@ describe('ThemeSettingsModal Component', () => {
     expect(screen.getByText(/glass frost locked at 0%/i)).toBeInTheDocument();
     expect(screen.getByRole('slider')).toBeDisabled();
   });
+
+  it('renders live typing indicator in preview and changes when typing animation is selected', () => {
+    render(
+      <ThemeProvider>
+        <ThemeSettingsModal isOpen={true} onClose={vi.fn()} />
+      </ThemeProvider>
+    );
+
+    // Live typing indicator should be present in preview box
+    expect(screen.getByTestId('preview-typing-indicator')).toBeInTheDocument();
+
+    // Navigate to Sensory tab
+    const sensoryTab = screen.getByRole('button', { name: /sensory/i });
+    fireEvent.click(sensoryTab);
+
+    // Select Pulsing Hearts
+    const heartsOption = screen.getByRole('button', { name: /pulsing hearts/i });
+    fireEvent.click(heartsOption);
+
+    // Preview reflects hearts animation
+    expect(screen.getByTestId('preview-typing-hearts')).toBeInTheDocument();
+  });
 });

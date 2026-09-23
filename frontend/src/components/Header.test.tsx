@@ -324,4 +324,64 @@ describe('ArchiveModal Component', () => {
     });
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
+
+  it('clear archive triggers 3s cooldown and allows permanent deletion', async () => {
+    vi.useFakeTimers();
+    const deleteSpy = vi.fn().mockResolvedValue(true);
+    const updateSpy = vi.fn().mockResolvedValue({ id: 'settings_1', archived_at: '' });
+    (pb.collection as any).mockImplementation((col: string) => {
+      if (col === 'messages') {
+        return {
+          delete: deleteSpy,
+          subscribe: vi.fn().mockResolvedValue(vi.fn()),
+        };
+      }
+      return {
+        getFullList: vi.fn().mockResolvedValue([{ id: 'settings_1', archived_at: '2026-09-22T10:00:00Z' }]),
+        update: updateSpy,
+      };
+    });
+
+    const mockClose = vi.fn();
+    render(
+      <ArchiveModal
+        isOpen={true}
+        onClose={mockClose}
+        archivedAt="2026-09-22T10:00:00Z"
+        messages={mockMessages}
+      />
+    );
+
+    // Initial Clear Archive button
+    const clearButton = screen.getByRole('button', { name: /clear archive/i });
+    expect(clearButton).toBeInTheDocument();
+
+    // Click Clear Archive to initiate cooldown
+    fireEvent.click(clearButton);
+
+    // Cooldown is active (3s countdown)
+    expect(screen.getByText(/wait \(3s\)/i)).toBeInTheDocument();
+
+    // Fast-forward countdown timers
+    for (let i = 0; i < 4; i++) {
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+    }
+
+    // Button transforms into confirm wipe
+    const confirmButton = screen.getByRole('button', { name: /confirm clear archive/i });
+    expect(confirmButton).toBeInTheDocument();
+
+    // Click confirm wipe
+    await act(async () => {
+      fireEvent.click(confirmButton);
+    });
+
+    // All messages deleted
+    expect(deleteSpy).toHaveBeenCalledTimes(mockMessages.length);
+    expect(updateSpy).toHaveBeenCalledWith('settings_1', { archived_at: '' });
+
+    vi.useRealTimers();
+  });
 });

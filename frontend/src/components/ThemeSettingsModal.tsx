@@ -93,6 +93,9 @@ export function ThemeSettingsModal({
 
   if (!isOpen) return null;
 
+  const isTui = theme.id === 'terminal-tui';
+  const isDaylight = theme.id === 'daylight';
+
   const presets = Object.values(THEME_PRESETS);
 
   const bubbleOptions: { id: BubbleStyle; label: string; desc: string }[] = [
@@ -117,32 +120,48 @@ export function ThemeSettingsModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
     >
       <div
-        className={`relative flex w-full max-w-xl flex-col rounded-3xl border border-zinc-800 bg-zinc-950 p-4 sm:p-5 shadow-2xl text-white my-auto max-h-[92vh] overflow-y-auto ${className}`}
+        className={`relative flex w-full max-w-xl flex-col p-4 sm:p-5 shadow-2xl my-auto max-h-[92vh] overflow-y-auto transition-all duration-200 ${
+          isTui
+            ? 'rounded-none border border-[#00ff41] bg-black text-[#00ff41] font-mono shadow-[0_0_24px_rgba(0,255,65,0.25)]'
+            : isDaylight
+            ? 'rounded-2xl border border-zinc-200 bg-white text-zinc-900 shadow-xl'
+            : 'rounded-3xl border border-white/20 bg-zinc-950/85 backdrop-blur-xl text-white shadow-2xl'
+        } ${className}`}
         style={{
-          backgroundColor: 'var(--theme-bg-secondary)',
-          borderColor: 'var(--theme-border-subtle)',
-          color: 'var(--theme-text-primary)',
+          backgroundColor: isTui ? '#000000' : isDaylight ? '#ffffff' : 'var(--theme-bg-secondary)',
+          borderColor: isTui ? '#00ff41' : isDaylight ? '#e4e4e7' : 'var(--theme-border-subtle)',
+          color: isTui ? '#00ff41' : isDaylight ? '#18181b' : 'var(--theme-text-primary)',
         }}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-3">
+        <div
+          className={`flex items-center justify-between pb-3 mb-3 border-b ${
+            isTui ? 'border-[#00ff41]' : isDaylight ? 'border-zinc-200' : 'border-zinc-800/60'
+          }`}
+        >
           <div className="flex items-center gap-2.5">
             <span
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800"
-              style={{
-                backgroundColor: 'var(--theme-bg-surface)',
-                borderColor: 'var(--theme-border-subtle)',
-                color: 'var(--theme-accent)',
-              }}
+              className={`flex h-9 w-9 items-center justify-center ${
+                isTui
+                  ? 'rounded-none border border-[#00ff41] bg-black text-[#00ff41]'
+                  : isDaylight
+                  ? 'rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-800'
+                  : 'rounded-xl border border-zinc-800 bg-zinc-900 text-white'
+              }`}
+              style={
+                !isTui && !isDaylight
+                  ? { backgroundColor: 'var(--theme-bg-surface)', borderColor: 'var(--theme-border-subtle)', color: 'var(--theme-accent)' }
+                  : undefined
+              }
             >
               <Icon name="tune" className="text-xl" />
             </span>
             <div>
-              <h2 className="text-base font-semibold font-heading tracking-tight leading-tight">
-                Appearance &amp; Themes
+              <h2 className={`text-base font-semibold font-heading tracking-tight leading-tight ${isTui ? 'font-mono' : ''}`}>
+                {isTui ? '[ THEME CONTROL CENTER ]' : 'Appearance & Themes'}
               </h2>
-              <p className="text-xs text-zinc-400">
-                Interactive theme &amp; glassmorphism control center
+              <p className={`text-xs ${isTui ? 'text-[#00ff41]/70 font-mono' : isDaylight ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                {isTui ? 'TERMINAL_UI // CONFIG_MODE' : 'Interactive theme & glassmorphism control center'}
               </p>
             </div>
           </div>
@@ -151,7 +170,13 @@ export function ThemeSettingsModal({
             type="button"
             onClick={onClose}
             aria-label="Close appearance settings"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors cursor-pointer"
+            className={`flex h-8 w-8 items-center justify-center cursor-pointer transition-colors ${
+              isTui
+                ? 'rounded-none border border-[#00ff41] text-[#00ff41] hover:bg-[#00ff41] hover:text-black font-mono'
+                : isDaylight
+                ? 'rounded-full text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
+                : 'rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-white'
+            }`}
           >
             <Icon name="close" className="text-lg" />
           </button>
@@ -160,8 +185,10 @@ export function ThemeSettingsModal({
         {/* Live Mini-Chat In-Modal Preview */}
         <div className="mb-3 flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 font-heading">
-              Live Mini-Chat Preview
+            <span className={`text-[11px] font-medium uppercase tracking-wider font-heading ${
+              isTui ? 'text-[#00ff41] font-mono' : isDaylight ? 'text-zinc-500' : 'text-zinc-400'
+            }`}>
+              {isTui ? '[ LIVE CHAT PREVIEW ]' : 'Live Mini-Chat Preview'}
             </span>
             <span className="text-[10px] text-zinc-400 font-mono">
               {theme.headingFont}
@@ -173,10 +200,16 @@ export function ThemeSettingsModal({
             data-preview-theme={theme.id}
             data-preview-bubble={theme.bubbleStyle}
             data-preview-typing={theme.typingAnimation}
-            className="relative rounded-2xl border p-3 flex flex-col gap-2.5 transition-all duration-300 overflow-hidden bg-cover bg-center min-h-[140px]"
+            className={`relative p-3 flex flex-col gap-2.5 transition-all duration-300 overflow-hidden bg-cover bg-center max-h-56 min-h-[150px] ${
+              isTui
+                ? 'rounded-none border border-[#00ff41]'
+                : isDaylight
+                ? 'rounded-2xl border border-zinc-200'
+                : 'rounded-2xl border'
+            }`}
             style={{
-              backgroundColor: 'var(--theme-bg-primary)',
-              borderColor: 'var(--theme-border-subtle)',
+              backgroundColor: isTui ? '#000000' : 'var(--theme-bg-primary)',
+              borderColor: isTui ? '#00ff41' : 'var(--theme-border-subtle)',
               fontFamily: 'var(--font-body)',
               backgroundImage: theme.wallpaperUrl ? `url(${theme.wallpaperUrl})` : undefined,
             }}
@@ -191,7 +224,7 @@ export function ThemeSettingsModal({
               }}
             />
 
-            <div className="relative z-10 flex flex-col gap-2">
+            <div className="relative z-10 flex flex-col gap-2 overflow-y-auto">
               {/* Partner message preview */}
               <div className="self-start max-w-[82%]">
                 <div
@@ -214,7 +247,7 @@ export function ThemeSettingsModal({
                 >
                   Hey! Check out this frosted glass live. ✨
                 </div>
-                <span className="text-[9px] text-zinc-500 mt-0.5 block">10:42 PM</span>
+                <span className={`text-[9px] mt-0.5 block ${isTui ? 'text-[#00ff41]/60 font-mono' : 'text-zinc-500'}`}>10:42 PM</span>
               </div>
 
               {/* User message preview */}
@@ -239,27 +272,92 @@ export function ThemeSettingsModal({
                 >
                   Looks stunning over the wallpaper!
                 </div>
-                <span className="text-[9px] text-zinc-500 mt-0.5 block text-right">10:43 PM</span>
+                <span className={`text-[9px] mt-0.5 block text-right ${isTui ? 'text-[#00ff41]/60 font-mono' : 'text-zinc-500'}`}>10:43 PM</span>
+              </div>
+
+              {/* Live typing indicator preview */}
+              <div
+                data-testid="preview-typing-indicator"
+                className="self-start flex items-center gap-1.5 text-xs select-none mt-0.5"
+                style={{
+                  color: isTui ? '#00ff41' : 'var(--theme-text-primary)',
+                  fontFamily: isTui ? 'var(--font-mono, monospace)' : undefined,
+                }}
+              >
+                {theme.typingAnimation === 'dots' && (
+                  <span className="flex items-center gap-0.5" data-testid="preview-typing-dots">
+                    <span
+                      className="h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:-0.32s]"
+                      style={{ backgroundColor: 'var(--theme-accent)' }}
+                    />
+                    <span
+                      className="h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:-0.16s]"
+                      style={{ backgroundColor: 'var(--theme-accent)' }}
+                    />
+                    <span
+                      className="h-1.5 w-1.5 rounded-full animate-bounce"
+                      style={{ backgroundColor: 'var(--theme-accent)' }}
+                    />
+                  </span>
+                )}
+                {theme.typingAnimation === 'hearts' && (
+                  <span className="flex items-center gap-0.5 text-xs text-rose-400" data-testid="preview-typing-hearts">
+                    <span className="animate-heart-beat">♥</span>
+                    <span className="animate-heart-beat [animation-delay:0.2s]">♥</span>
+                    <span className="animate-heart-beat [animation-delay:0.4s]">♥</span>
+                  </span>
+                )}
+                {theme.typingAnimation === 'neon-pulse' && (
+                  <span className="flex items-center gap-1 font-mono text-cyan-400 text-[11px] tracking-wider animate-pulse" data-testid="preview-typing-neon-pulse">
+                    <span className="h-1.5 w-1.5 rounded-xs bg-[#00f0ff] animate-ping" />
+                    <span>[SYS.TYPING] █</span>
+                  </span>
+                )}
+                {theme.typingAnimation === 'glow-bar' && (
+                  <div className="relative h-1 w-14 overflow-hidden rounded-full bg-zinc-800" data-testid="preview-typing-glow-bar">
+                    <div
+                      className="absolute inset-y-0 w-5 rounded-full animate-sweep-glow"
+                      style={{
+                        background: 'linear-gradient(90deg, #4f7cff, #a855f7)',
+                        boxShadow: '0 0 8px #a855f7',
+                      }}
+                    />
+                  </div>
+                )}
+                <span className={`text-[10px] font-medium opacity-75 ${isTui ? 'font-mono' : ''}`}>
+                  {isTui ? 'sweetheart typing...' : 'Sweetheart is typing...'}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* 3-Tab Control Navigation Bar */}
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-900/70 border border-zinc-800/80 rounded-2xl mb-4">
+        <div
+          className={`flex items-center gap-1.5 p-1 mb-4 transition-colors ${
+            isTui
+              ? 'rounded-none border border-[#00ff41] bg-black'
+              : isDaylight
+              ? 'rounded-xl border border-zinc-200 bg-zinc-100'
+              : 'rounded-2xl border border-zinc-800/80 bg-zinc-900/70'
+          }`}
+        >
           <button
             type="button"
             onClick={() => setActiveTab('vibe')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'vibe'
-                ? 'bg-zinc-800 text-white shadow-xs'
-                : 'text-zinc-400 hover:text-white'
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold transition-all cursor-pointer ${
+              isTui
+                ? activeTab === 'vibe'
+                  ? 'rounded-none bg-[#00ff41] text-black font-mono font-bold'
+                  : 'rounded-none text-[#00ff41] hover:bg-[#00ff41]/20 font-mono'
+                : isDaylight
+                ? activeTab === 'vibe'
+                  ? 'rounded-lg bg-white text-zinc-900 shadow-xs'
+                  : 'rounded-lg text-zinc-600 hover:text-zinc-900'
+                : activeTab === 'vibe'
+                ? 'rounded-xl bg-zinc-800 text-white shadow-xs'
+                : 'rounded-xl text-zinc-400 hover:text-white'
             }`}
-            style={
-              activeTab === 'vibe'
-                ? { backgroundColor: 'var(--theme-bg-surface)', color: 'var(--theme-accent)' }
-                : undefined
-            }
           >
             <Icon name="palette" className="text-sm" />
             <span>Vibe</span>
@@ -268,16 +366,19 @@ export function ThemeSettingsModal({
           <button
             type="button"
             onClick={() => setActiveTab('interface')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'interface'
-                ? 'bg-zinc-800 text-white shadow-xs'
-                : 'text-zinc-400 hover:text-white'
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold transition-all cursor-pointer ${
+              isTui
+                ? activeTab === 'interface'
+                  ? 'rounded-none bg-[#00ff41] text-black font-mono font-bold'
+                  : 'rounded-none text-[#00ff41] hover:bg-[#00ff41]/20 font-mono'
+                : isDaylight
+                ? activeTab === 'interface'
+                  ? 'rounded-lg bg-white text-zinc-900 shadow-xs'
+                  : 'rounded-lg text-zinc-600 hover:text-zinc-900'
+                : activeTab === 'interface'
+                ? 'rounded-xl bg-zinc-800 text-white shadow-xs'
+                : 'rounded-xl text-zinc-400 hover:text-white'
             }`}
-            style={
-              activeTab === 'interface'
-                ? { backgroundColor: 'var(--theme-bg-surface)', color: 'var(--theme-accent)' }
-                : undefined
-            }
           >
             <Icon name="grid_view" className="text-sm" />
             <span>Interface</span>
@@ -286,16 +387,19 @@ export function ThemeSettingsModal({
           <button
             type="button"
             onClick={() => setActiveTab('sensory')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'sensory'
-                ? 'bg-zinc-800 text-white shadow-xs'
-                : 'text-zinc-400 hover:text-white'
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold transition-all cursor-pointer ${
+              isTui
+                ? activeTab === 'sensory'
+                  ? 'rounded-none bg-[#00ff41] text-black font-mono font-bold'
+                  : 'rounded-none text-[#00ff41] hover:bg-[#00ff41]/20 font-mono'
+                : isDaylight
+                ? activeTab === 'sensory'
+                  ? 'rounded-lg bg-white text-zinc-900 shadow-xs'
+                  : 'rounded-lg text-zinc-600 hover:text-zinc-900'
+                : activeTab === 'sensory'
+                ? 'rounded-xl bg-zinc-800 text-white shadow-xs'
+                : 'rounded-xl text-zinc-400 hover:text-white'
             }`}
-            style={
-              activeTab === 'sensory'
-                ? { backgroundColor: 'var(--theme-bg-surface)', color: 'var(--theme-accent)' }
-                : undefined
-            }
           >
             <Icon name="graphic_eq" className="text-sm" />
             <span>Sensory</span>
@@ -656,8 +760,10 @@ export function ThemeSettingsModal({
 
             {/* Custom Typing Animations */}
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-zinc-400 font-heading">
-                Typing Animation Override
+              <span className={`text-xs font-medium uppercase tracking-wider font-heading ${
+                isTui ? 'text-[#00ff41] font-mono' : isDaylight ? 'text-zinc-500' : 'text-zinc-400'
+              }`}>
+                {isTui ? '[ TYPING ANIMATION OVERRIDE ]' : 'Typing Animation Override'}
               </span>
               <div className="grid grid-cols-2 gap-2">
                 {typingOptions.map((opt) => {
@@ -668,14 +774,59 @@ export function ThemeSettingsModal({
                       type="button"
                       onClick={() => setTypingAnimation(opt.id)}
                       aria-pressed={isSelected}
-                      className={`p-2.5 text-left rounded-xl border text-xs transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-white bg-zinc-900 ring-1 ring-white/20'
-                          : 'border-zinc-800 bg-zinc-900/30 hover:border-zinc-700'
+                      className={`typing-preview-card p-3 text-left border text-xs transition-all cursor-pointer flex flex-col gap-2 ${
+                        isTui
+                          ? `rounded-none font-mono ${
+                              isSelected
+                                ? 'border-[#00ff41] bg-[#00ff41]/20 text-[#00ff41] shadow-[0_0_8px_rgba(0,255,65,0.3)]'
+                                : 'border-[#00ff41]/40 bg-black text-[#00ff41]/80 hover:border-[#00ff41]'
+                            }`
+                          : isDaylight
+                          ? `rounded-xl ${
+                              isSelected
+                                ? 'border-zinc-900 bg-zinc-100 text-zinc-900 ring-1 ring-zinc-900'
+                                : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400 shadow-2xs'
+                            }`
+                          : `rounded-xl ${
+                              isSelected
+                                ? 'border-white bg-white/10 ring-1 ring-white/20 text-white'
+                                : 'border-zinc-800 bg-zinc-900/40 hover:border-zinc-700 text-zinc-300'
+                            }`
                       }`}
                     >
-                      <span className="font-semibold block text-zinc-200">{opt.label}</span>
-                      <span className="text-[11px] text-zinc-400 block truncate">{opt.desc}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold block">{opt.label}</span>
+                        {/* Live CSS keyframe preview snippet: paused by default, active on hover or when selected */}
+                        <div className="h-4 flex items-center">
+                          {opt.id === 'dots' && (
+                            <span className="flex items-center gap-0.5">
+                              <span className="typing-anim h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:-0.32s]" />
+                              <span className="typing-anim h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:-0.16s]" />
+                              <span className="typing-anim h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce" />
+                            </span>
+                          )}
+                          {opt.id === 'hearts' && (
+                            <span className="flex items-center gap-0.5 text-xs text-rose-400">
+                              <span className="typing-anim animate-heart-beat">♥</span>
+                              <span className="typing-anim animate-heart-beat [animation-delay:0.2s]">♥</span>
+                            </span>
+                          )}
+                          {opt.id === 'neon-pulse' && (
+                            <span className="typing-anim font-mono text-[10px] text-cyan-400 animate-pulse tracking-tight">
+                              [SYS] █
+                            </span>
+                          )}
+                          {opt.id === 'glow-bar' && (
+                            <div className="relative h-1 w-10 overflow-hidden rounded-full bg-zinc-800">
+                              <div
+                                className="typing-anim absolute inset-y-0 w-3 rounded-full animate-sweep-glow"
+                                style={{ background: 'linear-gradient(90deg, #4f7cff, #a855f7)' }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-[11px] opacity-70 block truncate">{opt.desc}</span>
                     </button>
                   );
                 })}
