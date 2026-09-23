@@ -287,10 +287,11 @@ export function Header({
               type="button"
               onClick={onOpenArchive}
               aria-label="View archive"
+              title="View History"
               className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium cursor-pointer transition-all ${getHeaderButtonClasses()}`}
             >
-              <Icon name="archive" className="text-base text-inherit" />
-              <span className="hidden sm:inline">View Archive</span>
+              <Icon name="history" className="text-base text-inherit" />
+              <span className="hidden sm:inline">History</span>
             </button>
           )}
 
@@ -313,6 +314,7 @@ export function Header({
             type="button"
             onClick={() => setIsConfirmOpen(true)}
             aria-label="Archive chat"
+            title="Archive Chat"
             className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium cursor-pointer transition-all ${getHeaderButtonClasses()}`}
           >
             <Icon name="archive" className="text-base text-inherit" />
