@@ -9,6 +9,8 @@ export interface MessageComposerProps {
   currentUserId?: string;
   onMessageSent?: (message: Message) => void;
   onTyping?: (isTyping: boolean) => void;
+  isPartnerTyping?: boolean;
+  partnerName?: string;
   className?: string;
 }
 
@@ -16,6 +18,8 @@ export function MessageComposer({
   currentUserId: propCurrentUserId,
   onMessageSent,
   onTyping,
+  isPartnerTyping = false,
+  partnerName = 'Partner',
   className = '',
 }: MessageComposerProps) {
   const [text, setText] = useState<string>('');
@@ -172,8 +176,27 @@ export function MessageComposer({
   return (
     <div
       data-testid="message-composer"
-      className={`border-t border-zinc-800 bg-zinc-950 p-3 ${className}`}
+      className={`border-t border-zinc-800 bg-zinc-950 px-3 pt-1.5 pb-3 ${className}`}
     >
+      {/* Discord-style typing indicator */}
+      <div className="h-5 px-1 flex items-center text-xs text-zinc-400 select-none overflow-hidden">
+        {isPartnerTyping && (
+          <div
+            data-testid="partner-typing-indicator"
+            className="flex items-center gap-1.5"
+          >
+            <span className="flex items-center gap-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.32s]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.16s]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce" />
+            </span>
+            <span className="truncate">
+              <strong className="font-semibold text-zinc-200">{partnerName}</strong> is typing...
+            </span>
+          </div>
+        )}
+      </div>
+
       {errorMessage && (
         <div className="mb-2 flex items-center justify-between rounded-lg bg-red-950/60 border border-red-900 px-3 py-1.5 text-xs text-red-200">
           <span>{errorMessage}</span>

@@ -347,8 +347,10 @@ function AuthenticatedApp() {
       {/* Message Composer */}
       <footer className="shrink-0">
         <MessageComposer
-          currentUserId={user.id}
+          currentUserId={userId}
           onTyping={handleTyping}
+          isPartnerTyping={isPartnerTyping}
+          partnerName={partner?.display_name || partner?.username || 'Partner'}
         />
       </footer>
 

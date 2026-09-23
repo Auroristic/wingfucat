@@ -81,7 +81,7 @@ describe('MessageThread Component', () => {
     expect(scrollIntoViewMock).toHaveBeenCalledTimes(2);
   });
 
-  it('renders typing indicator bubble when isPartnerTyping is true', () => {
+  it('does not render in-thread typing bubble (typing indicator is now on composer like Discord)', () => {
     render(
       <MessageThread
         messages={mockMessages}
@@ -91,6 +91,6 @@ describe('MessageThread Component', () => {
       />
     );
 
-    expect(screen.getByTestId('partner-typing-bubble')).toBeInTheDocument();
+    expect(screen.queryByTestId('partner-typing-bubble')).toBeNull();
   });
 });

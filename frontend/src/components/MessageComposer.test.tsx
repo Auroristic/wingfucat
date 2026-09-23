@@ -130,4 +130,18 @@ describe('MessageComposer Component', () => {
     expect(screen.getByPlaceholderText(/type a message/i)).toBeInTheDocument();
     expect(screen.queryByTestId('voice-recorder')).toBeNull();
   });
+
+  it('renders Discord-style typing indicator when partner is typing', () => {
+    render(<MessageComposer isPartnerTyping={true} partnerName="wingfu" />);
+
+    expect(screen.getByTestId('partner-typing-indicator')).toBeInTheDocument();
+    expect(screen.getByText('wingfu')).toBeInTheDocument();
+    expect(screen.getByText(/is typing\.\.\./i)).toBeInTheDocument();
+  });
+
+  it('does not render typing indicator when partner is not typing', () => {
+    render(<MessageComposer isPartnerTyping={false} partnerName="wingfu" />);
+
+    expect(screen.queryByTestId('partner-typing-indicator')).toBeNull();
+  });
 });

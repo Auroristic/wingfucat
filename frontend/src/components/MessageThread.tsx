@@ -14,7 +14,7 @@ export interface MessageThreadProps {
 export function MessageThread({
   messages,
   isLoading = false,
-  isPartnerTyping = false,
+  isPartnerTyping: _isPartnerTyping = false,
   currentUserId: propCurrentUserId,
   className = '',
 }: MessageThreadProps) {
@@ -61,18 +61,7 @@ export function MessageThread({
   if (!messages || messages.length === 0) {
     return (
       <div className={`flex-1 flex flex-col items-center justify-center p-4 text-zinc-600 text-sm ${className}`}>
-        {isPartnerTyping ? (
-          <div
-            data-testid="partner-typing-bubble"
-            className="flex items-center gap-1.5 rounded-2xl bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 text-zinc-400"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.3s]" />
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.15s]" />
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce" />
-          </div>
-        ) : (
-          <span>No messages yet</span>
-        )}
+        <span>No messages yet</span>
       </div>
     );
   }
@@ -90,16 +79,6 @@ export function MessageThread({
           currentUserId={currentUserId}
         />
       ))}
-      {isPartnerTyping && (
-        <div
-          data-testid="partner-typing-bubble"
-          className="flex items-center gap-1.5 self-start rounded-2xl rounded-bl-xs bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 text-zinc-400"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.3s]" />
-          <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.15s]" />
-          <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 animate-bounce" />
-        </div>
-      )}
       <div ref={bottomRef} data-testid="thread-bottom" />
     </div>
   );
