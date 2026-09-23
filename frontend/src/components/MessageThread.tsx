@@ -11,6 +11,7 @@ export interface MessageThreadProps {
   isPartnerTyping?: boolean;
   currentUserId?: string;
   className?: string;
+  scrollRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 export function MessageThread({
@@ -19,6 +20,7 @@ export function MessageThread({
   isPartnerTyping: _isPartnerTyping = false,
   currentUserId: propCurrentUserId,
   className = '',
+  scrollRef,
 }: MessageThreadProps) {
   let authUserId: string | undefined;
   try {
@@ -51,6 +53,22 @@ export function MessageThread({
       }
     }
   }, [messages]);
+
+  // Expose container scroll to bottom helper for keyboard focus & external triggers
+  useEffect(() => {
+    if (scrollRef) {
+      scrollRef.current = () => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
+      };
+    }
+    return () => {
+      if (scrollRef) {
+        scrollRef.current = null;
+      }
+    };
+  }, [scrollRef]);
 
   if (isLoading && (!messages || messages.length === 0)) {
     return (
@@ -185,9 +203,10 @@ export interface LiveMessageThreadProps {
   archivedAt?: string | null;
   isPartnerTyping?: boolean;
   className?: string;
+  scrollRef?: React.MutableRefObject<(() => void) | null>;
 }
 
-export function LiveMessageThread({ archivedAt, isPartnerTyping = false, className }: LiveMessageThreadProps) {
+export function LiveMessageThread({ archivedAt, isPartnerTyping = false, className, scrollRef }: LiveMessageThreadProps) {
   const { messages, isLoading } = useMessages({ archivedAt });
   return (
     <MessageThread
@@ -195,6 +214,7 @@ export function LiveMessageThread({ archivedAt, isPartnerTyping = false, classNa
       isLoading={isLoading}
       isPartnerTyping={isPartnerTyping}
       className={className}
+      scrollRef={scrollRef}
     />
   );
 }

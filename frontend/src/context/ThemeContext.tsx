@@ -241,11 +241,28 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
   },
 };
 
+export function hexToRgba(hex: string, alpha: number): string {
+  if (!hex || typeof hex !== 'string') return hex;
+  let clean = hex.replace('#', '').trim();
+  if (clean.length === 3) {
+    clean = clean.split('').map((ch) => ch + ch).join('');
+  }
+  if (clean.length !== 6) return hex;
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
+  const clampedAlpha = Math.max(0, Math.min(1, alpha));
+  return `rgba(${r}, ${g}, ${b}, ${clampedAlpha})`;
+}
+
 export interface ActiveTheme {
   id: ThemePresetId;
   headingFont: string;
   bodyFont: string;
   bubbleStyle: BubbleStyle;
+  bubbleTransparent?: boolean;
+  bubbleOpacity?: number; // 10 to 100
   typingAnimation: TypingAnimation;
   wallpaperUrl: string;
   wallpaperDim: number;
@@ -260,6 +277,8 @@ export interface ThemeContextType {
   theme: ActiveTheme;
   setPreset: (presetId: ThemePresetId) => void;
   setBubbleStyle: (style: BubbleStyle) => void;
+  setBubbleTransparent: (transparent: boolean) => void;
+  setBubbleOpacity: (opacity: number) => void;
   setTypingAnimation: (anim: TypingAnimation) => void;
   setWallpaper: (url: string | null) => void;
   setWallpaperDim: (dim: number) => void;
@@ -278,6 +297,8 @@ export const getDefaultTheme = (): ActiveTheme => {
     headingFont: defaultPreset.headingFont,
     bodyFont: defaultPreset.bodyFont,
     bubbleStyle: defaultPreset.bubbleStyle,
+    bubbleTransparent: false,
+    bubbleOpacity: 75,
     typingAnimation: defaultPreset.typingAnimation,
     wallpaperUrl: defaultPreset.defaultWallpaper,
     wallpaperDim: 35,
@@ -306,11 +327,21 @@ export const parseThemeFromData = (data: any, fallbackFrost = 75): ActiveTheme |
     ? Math.max(0, Math.min(100, data.glassFrostLevel))
     : (base.isGlassSupported ? fallbackFrost : 0);
 
+  const bubbleTransparent = typeof data.bubbleTransparent === 'boolean'
+    ? data.bubbleTransparent
+    : false;
+
+  const bubbleOpacity = typeof data.bubbleOpacity === 'number'
+    ? Math.max(10, Math.min(100, data.bubbleOpacity))
+    : 75;
+
   return {
     id: base.id,
     headingFont: base.headingFont,
     bodyFont: base.bodyFont,
     bubbleStyle: validBubble,
+    bubbleTransparent,
+    bubbleOpacity,
     typingAnimation: validTyping,
     wallpaperUrl: typeof data.wallpaperUrl === 'string' && data.wallpaperUrl ? data.wallpaperUrl : base.defaultWallpaper,
     wallpaperDim: typeof data.wallpaperDim === 'number' ? Math.max(0, Math.min(90, data.wallpaperDim)) : 35,
@@ -396,10 +427,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--theme-text-primary', c.textPrimary);
     root.style.setProperty('--theme-text-secondary', c.textSecondary);
     root.style.setProperty('--theme-accent', c.accent);
-    root.style.setProperty('--theme-bubble-user-bg', c.bubbleUserBg);
+
+    const isTransparent = Boolean(theme.bubbleTransparent);
+    const bubbleOpacity = typeof theme.bubbleOpacity === 'number'
+      ? Math.max(10, Math.min(100, theme.bubbleOpacity))
+      : 75;
+    const alpha = bubbleOpacity / 100;
+
+    const userBubbleBg = isTransparent ? hexToRgba(c.bubbleUserBg, alpha) : c.bubbleUserBg;
+    const partnerBubbleBg = isTransparent ? hexToRgba(c.bubblePartnerBg, alpha) : c.bubblePartnerBg;
+
+    root.style.setProperty('--theme-bubble-user-bg', userBubbleBg);
     root.style.setProperty('--theme-bubble-user-text', c.bubbleUserText);
-    root.style.setProperty('--theme-bubble-partner-bg', c.bubblePartnerBg);
+    root.style.setProperty('--theme-bubble-partner-bg', partnerBubbleBg);
     root.style.setProperty('--theme-bubble-partner-text', c.bubblePartnerText);
+    root.style.setProperty('--theme-bubble-transparent', isTransparent ? '1' : '0');
+    root.style.setProperty('--theme-bubble-opacity', String(alpha));
+    root.style.setProperty('--theme-bubble-backdrop', isTransparent ? 'blur(8px)' : 'none');
+
     root.style.setProperty('--theme-wallpaper-dim', String(theme.wallpaperDim / 100));
     root.style.setProperty('--theme-wallpaper-blur', `${theme.wallpaperBlur}px`);
 
@@ -483,6 +528,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const settingsPayload = {
         id: themeWithTimestamp.id,
         bubbleStyle: themeWithTimestamp.bubbleStyle,
+        bubbleTransparent: themeWithTimestamp.bubbleTransparent,
+        bubbleOpacity: themeWithTimestamp.bubbleOpacity,
         typingAnimation: themeWithTimestamp.typingAnimation,
         wallpaperUrl: safeWallpaper,
         wallpaperDim: themeWithTimestamp.wallpaperDim,
@@ -528,6 +575,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         headingFont: preset.headingFont,
         bodyFont: preset.bodyFont,
         bubbleStyle: preset.bubbleStyle,
+        bubbleTransparent: prev.bubbleTransparent,
+        bubbleOpacity: prev.bubbleOpacity,
         typingAnimation: preset.typingAnimation,
         wallpaperUrl: preset.defaultWallpaper,
         wallpaperDim: 35,
@@ -545,6 +594,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme((prev) => {
       const next = { ...prev, bubbleStyle: style };
       persistTheme(next);
+      return next;
+    });
+  }, [persistTheme]);
+
+  const setBubbleTransparent = useCallback((transparent: boolean) => {
+    setTheme((prev) => {
+      const next = { ...prev, bubbleTransparent: transparent };
+      persistTheme(next);
+      return next;
+    });
+  }, [persistTheme]);
+
+  const setBubbleOpacity = useCallback((opacity: number) => {
+    setTheme((prev) => {
+      const clamped = Math.max(10, Math.min(100, opacity));
+      const next = { ...prev, bubbleOpacity: clamped };
+      persistTheme(next, true);
       return next;
     });
   }, [persistTheme]);
@@ -776,6 +842,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       theme,
       setPreset,
       setBubbleStyle,
+      setBubbleTransparent,
+      setBubbleOpacity,
       setTypingAnimation,
       setWallpaper,
       setWallpaperDim,
@@ -783,7 +851,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setGlassFrostLevel,
       resetToDefault,
     }),
-    [theme, setPreset, setBubbleStyle, setTypingAnimation, setWallpaper, setWallpaperDim, setWallpaperBlur, setGlassFrostLevel, resetToDefault]
+    [theme, setPreset, setBubbleStyle, setBubbleTransparent, setBubbleOpacity, setTypingAnimation, setWallpaper, setWallpaperDim, setWallpaperBlur, setGlassFrostLevel, resetToDefault]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -792,6 +860,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 const defaultThemeValue: ThemeContextType = {
   theme: {
     ...THEME_PRESETS['minimalist-oled'],
+    bubbleTransparent: false,
+    bubbleOpacity: 75,
     wallpaperUrl: THEME_PRESETS['minimalist-oled'].defaultWallpaper,
     wallpaperDim: 35,
     wallpaperBlur: 0,
@@ -800,6 +870,8 @@ const defaultThemeValue: ThemeContextType = {
   },
   setPreset: () => {},
   setBubbleStyle: () => {},
+  setBubbleTransparent: () => {},
+  setBubbleOpacity: () => {},
   setTypingAnimation: () => {},
   setWallpaper: () => {},
   setWallpaperDim: () => {},

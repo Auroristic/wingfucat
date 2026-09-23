@@ -54,6 +54,8 @@ export function ThemeSettingsModal({
     theme,
     setPreset,
     setBubbleStyle,
+    setBubbleTransparent,
+    setBubbleOpacity,
     setTypingAnimation,
     setWallpaper,
     setWallpaperDim,
@@ -269,6 +271,8 @@ export function ThemeSettingsModal({
                     backgroundColor: theme.id === 'terminal-tui' ? '#000000' : 'var(--theme-bubble-partner-bg)',
                     color: theme.id === 'terminal-tui' ? '#00ff41' : 'var(--theme-bubble-partner-text)',
                     borderColor: 'var(--theme-border-subtle)',
+                    backdropFilter: theme.id === 'terminal-tui' ? undefined : 'var(--theme-bubble-backdrop, none)',
+                    WebkitBackdropFilter: theme.id === 'terminal-tui' ? undefined : 'var(--theme-bubble-backdrop, none)',
                   }}
                 >
                   Hey! Check out this frosted glass live. ✨
@@ -294,6 +298,8 @@ export function ThemeSettingsModal({
                     backgroundColor: theme.id === 'terminal-tui' ? '#000000' : 'var(--theme-bubble-user-bg)',
                     color: theme.id === 'terminal-tui' ? '#00ff41' : 'var(--theme-bubble-user-text)',
                     borderColor: 'var(--theme-accent)',
+                    backdropFilter: theme.id === 'terminal-tui' ? undefined : 'var(--theme-bubble-backdrop, none)',
+                    WebkitBackdropFilter: theme.id === 'terminal-tui' ? undefined : 'var(--theme-bubble-backdrop, none)',
                   }}
                 >
                   Looks stunning over the wallpaper!
@@ -662,6 +668,7 @@ export function ThemeSettingsModal({
                   <input
                     type="range"
                     disabled
+                    aria-label="Glass frost level slider"
                     min="0"
                     max="100"
                     value="0"
@@ -682,6 +689,7 @@ export function ThemeSettingsModal({
                   </div>
                   <input
                     type="range"
+                    aria-label="Glass frost level slider"
                     min="0"
                     max="100"
                     step="5"
@@ -724,6 +732,74 @@ export function ThemeSettingsModal({
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Bubble Transparency & Opacity */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wider text-zinc-400 font-heading">
+                Bubble Transparency
+              </span>
+
+              <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3.5">
+                {/* Toggle Switch */}
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-zinc-200">Transparent Bubbles</span>
+                    <span className="text-[11px] text-zinc-400">
+                      Show wallpaper through message bubbles
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-label="Toggle transparent bubbles"
+                    aria-checked={Boolean(theme.bubbleTransparent)}
+                    onClick={() => setBubbleTransparent(!theme.bubbleTransparent)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      theme.bubbleTransparent ? 'bg-emerald-500' : 'bg-zinc-700'
+                    }`}
+                    style={
+                      theme.bubbleTransparent && !isTui && !isDaylight
+                        ? { backgroundColor: 'var(--theme-accent)' }
+                        : undefined
+                    }
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        theme.bubbleTransparent ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Opacity Slider */}
+                <div className={`flex flex-col gap-1.5 transition-opacity ${theme.bubbleTransparent ? 'opacity-100' : 'opacity-40'}`}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300">Bubble Opacity</span>
+                    <span className="font-mono font-bold" style={{ color: 'var(--theme-accent)' }}>
+                      {theme.bubbleTransparent ? (theme.bubbleOpacity ?? 75) : 100}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    step="5"
+                    disabled={!theme.bubbleTransparent}
+                    aria-label="Bubble opacity slider"
+                    value={theme.bubbleOpacity ?? 75}
+                    onChange={(e) => setBubbleOpacity(Number(e.target.value))}
+                    className="w-full cursor-pointer h-2 bg-zinc-800 rounded-lg appearance-none disabled:cursor-not-allowed"
+                    style={{ accentColor: 'var(--theme-accent)' }}
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono">
+                    <span>10% Glassy</span>
+                    <span>50% Semi</span>
+                    <span>100% Solid</span>
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -107,8 +107,10 @@ export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleP
               : (isOwn ? 'var(--theme-bubble-user-text)' : 'var(--theme-bubble-partner-text)'),
             borderColor: isTui
               ? undefined
-              : (!isOwn ? 'var(--theme-border-subtle)' : undefined),
+              : (!isOwn ? 'var(--theme-border-subtle)' : (theme.bubbleTransparent ? 'rgba(255,255,255,0.12)' : undefined)),
             clipPath: clipPathStyle,
+            backdropFilter: isTui ? undefined : 'var(--theme-bubble-backdrop, none)',
+            WebkitBackdropFilter: isTui ? undefined : 'var(--theme-bubble-backdrop, none)',
           }}
         >
           {message.media_type === 'image' && fileUrl && (

@@ -139,7 +139,7 @@ describe('ThemeSettingsModal Component', () => {
     fireEvent.click(interfaceTab);
 
     expect(screen.getByText(/glass frost level/i)).toBeInTheDocument();
-    const slider = screen.getByRole('slider');
+    const slider = screen.getByRole('slider', { name: /glass frost/i });
     expect(slider).toBeInTheDocument();
 
     // Now switch to vibe tab and pick Terminal TUI
@@ -151,7 +151,36 @@ describe('ThemeSettingsModal Component', () => {
     // Switch back to interface tab
     fireEvent.click(interfaceTab);
     expect(screen.getByText(/glass frost locked at 0%/i)).toBeInTheDocument();
-    expect(screen.getByRole('slider')).toBeDisabled();
+    expect(screen.getByRole('slider', { name: /glass frost/i })).toBeDisabled();
+  });
+
+  it('allows toggling bubble transparency and adjusting bubble opacity in Interface tab', () => {
+    render(
+      <ThemeProvider>
+        <ThemeSettingsModal isOpen={true} onClose={vi.fn()} />
+      </ThemeProvider>
+    );
+
+    const interfaceTab = screen.getByRole('button', { name: /interface/i });
+    fireEvent.click(interfaceTab);
+
+    // Transparency toggle
+    const toggle = screen.getByRole('switch', { name: /toggle transparent bubbles/i });
+    expect(toggle).toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+    // Opacity slider should initially be disabled when transparent is false
+    const opacitySlider = screen.getByRole('slider', { name: /bubble opacity slider/i });
+    expect(opacitySlider).toBeDisabled();
+
+    // Enable transparent bubbles
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(opacitySlider).not.toBeDisabled();
+
+    // Adjust opacity
+    fireEvent.change(opacitySlider, { target: { value: '60' } });
+    expect(opacitySlider).toHaveValue('60');
   });
 
   it('renders live typing indicator in preview and changes when typing animation is selected', () => {

@@ -25,6 +25,28 @@ function AuthenticatedApp() {
   // Local timestamp when partner update/heartbeat was last received on this device
   const partnerLastReceivedRef = useRef<number>(0);
   const typingTimeoutRef = useRef<any>(null);
+  const scrollThreadToBottomRef = useRef<(() => void) | null>(null);
+
+  // Fallback visualViewport height update for older browsers / dynamic keyboard resizing
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const updateViewportHeight = () => {
+      document.documentElement.style.setProperty('--app-viewport-height', `${vv.height}px`);
+    };
+    updateViewportHeight();
+    vv.addEventListener('resize', updateViewportHeight);
+    return () => {
+      vv.removeEventListener('resize', updateViewportHeight);
+    };
+  }, []);
+
+  const handleComposerFocus = useCallback(() => {
+    // When virtual keyboard opens on mobile, smoothly scroll thread container to bottom
+    setTimeout(() => {
+      scrollThreadToBottomRef.current?.();
+    }, 60);
+  }, []);
 
   // Monitor network connectivity
   useEffect(() => {
@@ -343,7 +365,7 @@ function AuthenticatedApp() {
 
   return (
     <div
-      className="relative flex h-dvh flex-col overflow-hidden transition-colors duration-200"
+      className="relative flex h-full w-full flex-col overflow-hidden transition-colors duration-200"
       style={{
         backgroundColor: 'var(--theme-bg-primary)',
         color: 'var(--theme-text-primary)',
@@ -405,6 +427,7 @@ function AuthenticatedApp() {
             archivedAt={archivedAt}
             isPartnerTyping={isPartnerTyping}
             className="flex-1"
+            scrollRef={scrollThreadToBottomRef}
           />
         </main>
 
@@ -415,6 +438,7 @@ function AuthenticatedApp() {
             onTyping={handleTyping}
             isPartnerTyping={isPartnerTyping}
             partnerName={partner?.display_name || partner?.username || 'Partner'}
+            onFocus={handleComposerFocus}
           />
         </footer>
       </div>

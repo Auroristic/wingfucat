@@ -14,6 +14,7 @@ export interface MessageComposerProps {
   isPartnerTyping?: boolean;
   partnerName?: string;
   className?: string;
+  onFocus?: () => void;
 }
 
 export function MessageComposer({
@@ -23,6 +24,7 @@ export function MessageComposer({
   isPartnerTyping = false,
   partnerName = 'Partner',
   className = '',
+  onFocus,
 }: MessageComposerProps) {
   const [text, setText] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -344,6 +346,7 @@ export function MessageComposer({
                 value={text}
                 onChange={handleTextChange}
                 onKeyDown={handleKeyDown}
+                onFocus={onFocus}
                 placeholder={
                   theme.id === 'pink-cloud'
                     ? 'Send a sweet message... ✨'

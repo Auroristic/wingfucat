@@ -184,5 +184,17 @@ describe('MessageBubble Component', () => {
     );
     expect(screen.getByTestId('message-bubble')).toHaveClass('tui-bubble-partner');
   });
+
+  it('applies backdrop filter when bubbleTransparent is enabled', () => {
+    localStorage.setItem('wingfucat_theme', JSON.stringify({ id: 'minimalist-oled', bubbleTransparent: true, bubbleOpacity: 60 }));
+    render(
+      <ThemeProvider>
+        <MessageBubble message={baseMessage} isSelf={true} />
+      </ThemeProvider>
+    );
+    const bubble = screen.getByTestId('message-bubble');
+    expect(bubble).toBeInTheDocument();
+    expect(bubble.style.backdropFilter).toBe('var(--theme-bubble-backdrop, none)');
+  });
 });
 
