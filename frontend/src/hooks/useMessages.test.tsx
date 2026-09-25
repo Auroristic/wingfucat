@@ -207,4 +207,56 @@ describe('useMessages hook', () => {
     expect(getFullListSpy).not.toHaveBeenCalled();
     expect(subscribeSpy).not.toHaveBeenCalled();
   });
+
+  it('optimistically pins message and updates PocketBase', async () => {
+    const updateSpy = vi.spyOn(pb.collection('messages'), 'update').mockResolvedValue({} as any);
+    const mockMsg: Message = { id: 'msg_to_pin', sender: 'usr_me', text: 'Important note', created: '2026-09-22T10:00:00Z' };
+    vi.spyOn(pb.collection('messages'), 'getFullList').mockResolvedValueOnce([mockMsg] as any);
+
+    const { result } = renderHook(() => useMessages());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(1);
+    });
+
+    let success = false;
+    await act(async () => {
+      success = await result.current.togglePin('msg_to_pin', false);
+    });
+
+    expect(success).toBe(true);
+    expect(result.current.messages[0].is_pinned).toBe(true);
+    expect(updateSpy).toHaveBeenCalledWith(
+      'msg_to_pin',
+      expect.objectContaining({ is_pinned: true, pinned_at: expect.any(String) })
+    );
+  });
+
+  it('enforces maximum 5 pinned messages limit', async () => {
+    const updateSpy = vi.spyOn(pb.collection('messages'), 'update');
+    const mockMsgs: Message[] = [
+      { id: 'p1', sender: 'usr_me', text: '1', is_pinned: true, created: '2026-09-22T10:00:00Z' },
+      { id: 'p2', sender: 'usr_me', text: '2', is_pinned: true, created: '2026-09-22T10:01:00Z' },
+      { id: 'p3', sender: 'usr_me', text: '3', is_pinned: true, created: '2026-09-22T10:02:00Z' },
+      { id: 'p4', sender: 'usr_me', text: '4', is_pinned: true, created: '2026-09-22T10:03:00Z' },
+      { id: 'p5', sender: 'usr_me', text: '5', is_pinned: true, created: '2026-09-22T10:04:00Z' },
+      { id: 'p6', sender: 'usr_me', text: '6', is_pinned: false, created: '2026-09-22T10:05:00Z' },
+    ];
+    vi.spyOn(pb.collection('messages'), 'getFullList').mockResolvedValueOnce(mockMsgs as any);
+
+    const { result } = renderHook(() => useMessages());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(6);
+    });
+
+    let success = false;
+    await act(async () => {
+      success = await result.current.togglePin('p6', false);
+    });
+
+    expect(success).toBe(false);
+    expect(result.current.messages[5].is_pinned).toBe(false);
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
 });

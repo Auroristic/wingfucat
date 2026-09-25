@@ -17,6 +17,7 @@ export interface UseMessagesResult {
   error: Error | null;
   sendMessage: (text: string) => Promise<Message>;
   markAsRead: (messageId: string) => Promise<void>;
+  togglePin: (messageId: string, currentPinned: boolean) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
 
@@ -216,12 +217,53 @@ export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult
     []
   );
 
+  // Toggle pin status (max 5 pins cap with optimistic update and rollback)
+  const togglePin = useCallback(
+    async (messageId: string, currentPinned: boolean): Promise<boolean> => {
+      const nextPinned = !currentPinned;
+      if (nextPinned) {
+        const pinnedCount = messagesRef.current.filter((m) => m.is_pinned).length;
+        if (pinnedCount >= 5) {
+          return false;
+        }
+      }
+
+      const pinnedAt = nextPinned ? new Date().toISOString() : '';
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, is_pinned: nextPinned, pinned_at: pinnedAt } : m
+        )
+      );
+
+      try {
+        await pb.collection('messages').update(messageId, {
+          is_pinned: nextPinned,
+          pinned_at: pinnedAt,
+        });
+        return true;
+      } catch (err) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? { ...m, is_pinned: currentPinned, pinned_at: currentPinned ? m.pinned_at : '' }
+              : m
+          )
+        );
+        console.error(`Failed to toggle pin for message ${messageId}:`, err);
+        return false;
+      }
+    },
+    []
+  );
+
   return {
     messages,
     isLoading,
     error,
     sendMessage,
     markAsRead,
+    togglePin,
     refetch: fetchMessages,
   };
 }

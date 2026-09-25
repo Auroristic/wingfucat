@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { LoginView } from './components/LoginView';
@@ -10,6 +10,7 @@ import { ThemeSettingsModal } from './components/ThemeSettingsModal';
 import { SharedGalleryModal } from './components/SharedGalleryModal';
 import { MediaLightbox } from './components/MediaLightbox';
 import { SearchOverlay } from './components/SearchOverlay';
+import { PinnedBanner } from './components/PinnedBanner';
 import { pb } from './lib/pocketbase';
 import { parseDate, toPocketBaseDate } from './utils/date';
 import { unlockAudioContext } from './utils/soundEffects';
@@ -22,7 +23,7 @@ function AuthenticatedApp() {
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
   const [chatSettingsRecordId, setChatSettingsRecordId] = useState<string | null>(null);
   const [archivedAt, setArchivedAt] = useState<string | null>(null);
-  const { messages, isLoading } = useMessages({ archivedAt });
+  const { messages, isLoading, togglePin } = useMessages({ archivedAt });
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState<boolean>(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState<boolean>(false);
@@ -43,6 +44,8 @@ function AuthenticatedApp() {
   const [isSearchActive, setIsSearchActive] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeSearchMessageId, setActiveSearchMessageId] = useState<string | undefined>(undefined);
+  const [targetPinId, setTargetPinId] = useState<string | undefined>(undefined);
+  const pinnedMessages = useMemo(() => messages.filter((m) => m.is_pinned), [messages]);
 
   // Local timestamp when partner update/heartbeat was last received on this device
   const partnerLastReceivedRef = useRef<number>(0);
@@ -469,6 +472,18 @@ function AuthenticatedApp() {
           }}
         />
 
+        {/* Collapsible Pinned Messages Banner (Max 5 pins) */}
+        <PinnedBanner
+          pinnedMessages={pinnedMessages}
+          onSelect={(msgId) => {
+            setTargetPinId(msgId);
+            setTimeout(() => setTargetPinId(undefined), 150);
+          }}
+          onUnpin={(msgId) => {
+            togglePin(msgId, true);
+          }}
+        />
+
         {/* Main chat thread */}
         <main className="flex-1 overflow-hidden flex flex-col bg-transparent">
           <LiveMessageThread
@@ -480,8 +495,10 @@ function AuthenticatedApp() {
             scrollRef={scrollThreadToBottomRef}
             partnerName={partner?.display_name || partner?.username || 'Partner'}
             onReply={(msg) => setReplyingTo(msg)}
+            onTogglePin={(id, current) => togglePin(id, current)}
             searchQuery={searchQuery}
             activeSearchMessageId={activeSearchMessageId}
+            targetMessageId={targetPinId}
             onOpenMedia={(url, type, caption) => {
               setLightboxState({
                 isOpen: true,

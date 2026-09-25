@@ -18,6 +18,7 @@ export interface MessageThreadProps {
   onOpenMedia?: (url: string, type: 'image' | 'video', caption?: string) => void;
   searchQuery?: string;
   activeSearchMessageId?: string;
+  targetMessageId?: string;
 }
 
 export function MessageThread({
@@ -33,6 +34,7 @@ export function MessageThread({
   onOpenMedia,
   searchQuery,
   activeSearchMessageId,
+  targetMessageId,
 }: MessageThreadProps) {
   let authUserId: string | undefined;
   try {
@@ -88,12 +90,13 @@ export function MessageThread({
     }
   }, [messages]);
 
-  // Jump to active search message if specified
+  // Jump to active search message or target pin
   useEffect(() => {
-    if (activeSearchMessageId) {
-      scrollToMessage(activeSearchMessageId);
+    const idToJump = targetMessageId || activeSearchMessageId;
+    if (idToJump) {
+      scrollToMessage(idToJump);
     }
-  }, [activeSearchMessageId]);
+  }, [targetMessageId, activeSearchMessageId]);
 
   // Expose container scroll to bottom helper for keyboard focus & external triggers
   useEffect(() => {
@@ -263,6 +266,7 @@ export interface LiveMessageThreadProps {
   onOpenMedia?: (url: string, type: 'image' | 'video', caption?: string) => void;
   searchQuery?: string;
   activeSearchMessageId?: string;
+  targetMessageId?: string;
 }
 
 export function LiveMessageThread({
@@ -278,6 +282,7 @@ export function LiveMessageThread({
   onOpenMedia,
   searchQuery,
   activeSearchMessageId,
+  targetMessageId,
 }: LiveMessageThreadProps) {
   const hookData = useMessages({
     archivedAt,
@@ -298,6 +303,7 @@ export function LiveMessageThread({
       onOpenMedia={onOpenMedia}
       searchQuery={searchQuery}
       activeSearchMessageId={activeSearchMessageId}
+      targetMessageId={targetMessageId}
     />
   );
 }
