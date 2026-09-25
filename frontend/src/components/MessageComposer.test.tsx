@@ -187,4 +187,70 @@ describe('MessageComposer Component', () => {
     );
     expect(screen.getByTestId('typing-dots')).toBeInTheDocument();
   });
+
+  it('attaches video, renders preview with filename and size, and uploads with media_type video', async () => {
+    const mockCreate = vi.fn().mockResolvedValue({ id: 'msg-video', media_type: 'video' });
+    (pb.collection as any).mockReturnValue({ create: mockCreate });
+
+    const { container } = render(<MessageComposer currentUserId="test-user-id" />);
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+
+    const videoFile = new File(['fake-video-content'], 'test.mp4', { type: 'video/mp4' });
+    Object.defineProperty(videoFile, 'size', { value: 2097152 }); // 2 MB
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [videoFile] } });
+    });
+
+    expect(screen.getByTestId('attachment-preview')).toBeInTheDocument();
+    expect(screen.getByText('test.mp4')).toBeInTheDocument();
+    expect(screen.getByText('2 MB')).toBeInTheDocument();
+
+    const sendButton = screen.getByRole('button', { name: /send message/i });
+    await act(async () => {
+      fireEvent.click(sendButton);
+    });
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const formDataArg = mockCreate.mock.calls[0][0];
+    expect(formDataArg.get('media_type')).toBe('video');
+    expect(formDataArg.get('file_name')).toBe('test.mp4');
+    expect(formDataArg.get('file_size')).toBe('2097152');
+    expect(formDataArg.get('sender')).toBe('test-user-id');
+  });
+
+  it('attaches document, renders preview with icon and size, and uploads with media_type file', async () => {
+    const mockCreate = vi.fn().mockResolvedValue({ id: 'msg-doc', media_type: 'file' });
+    (pb.collection as any).mockReturnValue({ create: mockCreate });
+
+    const { container } = render(<MessageComposer currentUserId="test-user-id" />);
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+
+    const docFile = new File(['pdf-data'], 'doc.pdf', { type: 'application/pdf' });
+    Object.defineProperty(docFile, 'size', { value: 1048576 }); // 1 MB
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [docFile] } });
+    });
+
+    expect(screen.getByTestId('attachment-preview')).toBeInTheDocument();
+    expect(screen.getByText('doc.pdf')).toBeInTheDocument();
+    expect(screen.getByText('1 MB')).toBeInTheDocument();
+    expect(screen.getByText('picture_as_pdf')).toBeInTheDocument();
+
+    const sendButton = screen.getByRole('button', { name: /send message/i });
+    await act(async () => {
+      fireEvent.click(sendButton);
+    });
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const formDataArg = mockCreate.mock.calls[0][0];
+    expect(formDataArg.get('media_type')).toBe('file');
+    expect(formDataArg.get('file_name')).toBe('doc.pdf');
+    expect(formDataArg.get('file_size')).toBe('1048576');
+  });
 });

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Icon } from './Icon';
 import { VoiceRecorder } from './VoiceRecorder';
 import { compressImage } from '../utils/imageCompressor';
+import { formatBytes, getFileCategory, getFileIconName } from '../utils/fileHelpers';
 import { pb } from '../lib/pocketbase';
 import { useTheme } from '../context/ThemeContext';
 import { playMessageSentSound } from '../utils/soundEffects';
@@ -15,6 +16,8 @@ export interface MessageComposerProps {
   partnerName?: string;
   className?: string;
   onFocus?: () => void;
+  replyToMessage?: Message | null;
+  onCancelReply?: () => void;
 }
 
 export function MessageComposer({
@@ -25,10 +28,12 @@ export function MessageComposer({
   partnerName = 'Partner',
   className = '',
   onFocus,
+  replyToMessage,
+  onCancelReply,
 }: MessageComposerProps) {
   const [text, setText] = useState<string>('');
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [isRecordingAudio, setIsRecordingAudio] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -40,35 +45,50 @@ export function MessageComposer({
     return propCurrentUserId ?? pb.authStore.record?.id ?? null;
   }, [propCurrentUserId]);
 
-  const clearImage = useCallback(() => {
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl);
+  const clearAttachment = useCallback(() => {
+    if (filePreviewUrl) {
+      URL.revokeObjectURL(filePreviewUrl);
     }
-    setSelectedImage(null);
-    setImagePreviewUrl(null);
+    setSelectedFile(null);
+    setFilePreviewUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [imagePreviewUrl]);
+  }, [filePreviewUrl]);
 
   useEffect(() => {
     return () => {
-      if (imagePreviewUrl) {
-        URL.revokeObjectURL(imagePreviewUrl);
+      if (filePreviewUrl) {
+        URL.revokeObjectURL(filePreviewUrl);
       }
     };
-  }, [imagePreviewUrl]);
+  }, [filePreviewUrl]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl);
+    // 50MB ceiling check (52,428,800 bytes)
+    const MAX_SIZE = 52428800;
+    if (file.size > MAX_SIZE) {
+      setErrorMessage(`File size exceeds 50MB limit (${formatBytes(file.size)})`);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
     }
 
-    setSelectedImage(file);
-    setImagePreviewUrl(URL.createObjectURL(file));
+    if (filePreviewUrl) {
+      URL.revokeObjectURL(filePreviewUrl);
+    }
+
+    const category = getFileCategory(file);
+    setSelectedFile(file);
+    if (category === 'image') {
+      setFilePreviewUrl(URL.createObjectURL(file));
+    } else {
+      setFilePreviewUrl(null);
+    }
     setErrorMessage(null);
   };
 
@@ -97,7 +117,7 @@ export function MessageComposer({
   const handleSend = async () => {
     if (isUploading) return;
     const trimmed = text.trim();
-    if (!trimmed && !selectedImage) return;
+    if (!trimmed && !selectedFile) return;
 
     const uid = getActiveUserId();
     if (!uid) {
@@ -115,10 +135,25 @@ export function MessageComposer({
       const formData = new FormData();
       formData.append('sender', uid);
 
-      if (selectedImage) {
-        formData.append('media_type', 'image');
-        const compressed = await compressImage(selectedImage);
-        formData.append('attachment', compressed);
+      if (replyToMessage) {
+        formData.append('reply_to', replyToMessage.id);
+      }
+
+      if (selectedFile) {
+        const category = getFileCategory(selectedFile);
+        formData.append('media_type', category);
+        formData.append('file_name', selectedFile.name);
+        formData.append('file_size', String(selectedFile.size));
+
+        if (category === 'image') {
+          const compressed = await compressImage(selectedFile);
+          formData.append('attachment', compressed);
+          // Update file_size to compressed size
+          formData.set('file_size', String(compressed.size));
+        } else {
+          formData.append('attachment', selectedFile);
+        }
+
         if (trimmed) {
           formData.append('text', trimmed);
         }
@@ -131,7 +166,8 @@ export function MessageComposer({
 
       playMessageSentSound(theme.id);
       setText('');
-      clearImage();
+      clearAttachment();
+      onCancelReply?.();
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -262,7 +298,7 @@ export function MessageComposer({
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {imagePreviewUrl && (
+            {selectedFile && filePreviewUrl && (
               <div
                 data-testid="image-preview"
                 className="relative inline-flex items-center gap-2 self-start rounded-2xl border p-1.5 backdrop-blur-md shadow-md"
@@ -272,13 +308,52 @@ export function MessageComposer({
                 }}
               >
                 <img
-                  src={imagePreviewUrl}
+                  src={filePreviewUrl}
                   alt="Selected attachment preview"
                   className="h-16 w-16 rounded-xl object-cover"
                 />
                 <button
                   type="button"
-                  onClick={clearImage}
+                  onClick={clearAttachment}
+                  aria-label="Remove attachment"
+                  className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white border border-zinc-700 transition-colors cursor-pointer"
+                >
+                  <Icon name="close" className="text-sm" />
+                </button>
+              </div>
+            )}
+
+            {selectedFile && !filePreviewUrl && (
+              <div
+                data-testid="attachment-preview"
+                className={`relative inline-flex items-center gap-3 self-start p-2 backdrop-blur-md shadow-md ${
+                  theme.id === 'terminal-tui'
+                    ? 'rounded-none border border-[#00ff41] bg-black text-[#00ff41] font-mono text-xs'
+                    : 'rounded-xl border border-zinc-700/60 bg-zinc-900/80 text-zinc-200'
+                }`}
+                style={{
+                  backgroundColor: theme.id === 'terminal-tui' ? '#000000' : 'var(--theme-bg-glass)',
+                  borderColor: theme.id === 'terminal-tui' ? '#00ff41' : 'var(--theme-border-subtle)',
+                }}
+              >
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                    theme.id === 'terminal-tui' ? 'border border-[#00ff41] text-[#00ff41]' : 'bg-white/10 text-zinc-300'
+                  }`}
+                >
+                  <Icon name={getFileIconName(selectedFile.name)} className="text-2xl" />
+                </div>
+                <div className="flex flex-col min-w-0 pr-6">
+                  <span className="truncate max-w-[180px] font-medium text-xs sm:text-sm">
+                    {theme.id === 'terminal-tui' ? `[FILE: ${selectedFile.name}]` : selectedFile.name}
+                  </span>
+                  <span className="text-[11px] text-zinc-400">
+                    {formatBytes(selectedFile.size)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearAttachment}
                   aria-label="Remove attachment"
                   className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white border border-zinc-700 transition-colors cursor-pointer"
                 >
@@ -307,8 +382,8 @@ export function MessageComposer({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={handleImageChange}
+                accept="image/*,video/*,application/pdf,text/*,.zip,.doc,.docx,.xlsx,.ppt,.pptx,.tar,.gz"
+                onChange={handleFileChange}
                 className="hidden"
               />
 
@@ -366,7 +441,7 @@ export function MessageComposer({
               <button
                 type="button"
                 onClick={handleSend}
-                disabled={isUploading || (!text.trim() && !selectedImage)}
+                disabled={isUploading || (!text.trim() && !selectedFile)}
                 aria-label="Send message"
                 className={`flex h-9 w-9 shrink-0 items-center justify-center transition-all cursor-pointer disabled:opacity-40 ${
                   theme.id === 'terminal-tui'
