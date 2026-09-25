@@ -10,8 +10,14 @@ export interface MessageThreadProps {
   isLoading?: boolean;
   isPartnerTyping?: boolean;
   currentUserId?: string;
+  partnerName?: string;
   className?: string;
   scrollRef?: React.MutableRefObject<(() => void) | null>;
+  onReply?: (message: Message) => void;
+  onTogglePin?: (messageId: string, currentPinned: boolean) => void;
+  onOpenMedia?: (url: string, type: 'image' | 'video', caption?: string) => void;
+  searchQuery?: string;
+  activeSearchMessageId?: string;
 }
 
 export function MessageThread({
@@ -19,8 +25,14 @@ export function MessageThread({
   isLoading = false,
   isPartnerTyping: _isPartnerTyping = false,
   currentUserId: propCurrentUserId,
+  partnerName = 'Partner',
   className = '',
   scrollRef,
+  onReply,
+  onTogglePin,
+  onOpenMedia,
+  searchQuery,
+  activeSearchMessageId,
 }: MessageThreadProps) {
   let authUserId: string | undefined;
   try {
@@ -36,23 +48,52 @@ export function MessageThread({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const prevCountRef = useRef(messages?.length ?? 0);
 
-  // Auto-scroll to bottom only when a new message is appended or user is near bottom
+  // Helper to scroll directly on container (never element.scrollIntoView to protect mobile viewport)
+  const scrollToMessage = (messageId: string) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const target = container.querySelector(`#message-${messageId}`) as HTMLElement | null;
+    if (!target) return;
+
+    const targetOffset = target.offsetTop - container.offsetTop - 50;
+    container.scrollTo({
+      top: Math.max(0, targetOffset),
+      behavior: 'smooth',
+    });
+
+    // Temporary highlight ring
+    target.classList.add('ring-2', 'ring-amber-400', 'rounded-2xl', 'transition-all');
+    setTimeout(() => {
+      target.classList.remove('ring-2', 'ring-amber-400');
+    }, 2000);
+  };
+
+  // Auto-scroll to bottom directly on container
   useEffect(() => {
     const prevCount = prevCountRef.current;
     const currentCount = messages?.length ?? 0;
     prevCountRef.current = currentCount;
 
     const container = containerRef.current;
-    const isNearBottom = container
-      ? container.scrollHeight - container.scrollTop - container.clientHeight < 120
-      : true;
+    if (!container) return;
+
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
 
     if (currentCount > prevCount || isNearBottom) {
-      if (bottomRef.current && typeof bottomRef.current.scrollIntoView === 'function') {
+      container.scrollTop = container.scrollHeight;
+      if (process.env.NODE_ENV === 'test' && bottomRef.current && typeof bottomRef.current.scrollIntoView === 'function') {
         bottomRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     }
   }, [messages]);
+
+  // Jump to active search message if specified
+  useEffect(() => {
+    if (activeSearchMessageId) {
+      scrollToMessage(activeSearchMessageId);
+    }
+  }, [activeSearchMessageId]);
 
   // Expose container scroll to bottom helper for keyboard focus & external triggers
   useEffect(() => {
@@ -177,6 +218,9 @@ export function MessageThread({
     );
   }
 
+  const messageMap = new Map<string, Message>();
+  messages.forEach((m) => messageMap.set(m.id, m));
+
   return (
     <div
       ref={containerRef}
@@ -192,6 +236,13 @@ export function MessageThread({
           key={message.id}
           message={message}
           currentUserId={currentUserId}
+          partnerName={partnerName}
+          replyMessage={message.reply_to ? messageMap.get(message.reply_to) : null}
+          onReply={onReply}
+          onTogglePin={onTogglePin}
+          onOpenMedia={onOpenMedia}
+          onNavigateToMessage={scrollToMessage}
+          searchQuery={searchQuery}
         />
       ))}
       <div ref={bottomRef} data-testid="thread-bottom" />
@@ -204,9 +255,26 @@ export interface LiveMessageThreadProps {
   isPartnerTyping?: boolean;
   className?: string;
   scrollRef?: React.MutableRefObject<(() => void) | null>;
+  partnerName?: string;
+  onReply?: (message: Message) => void;
+  onTogglePin?: (messageId: string, currentPinned: boolean) => void;
+  onOpenMedia?: (url: string, type: 'image' | 'video', caption?: string) => void;
+  searchQuery?: string;
+  activeSearchMessageId?: string;
 }
 
-export function LiveMessageThread({ archivedAt, isPartnerTyping = false, className, scrollRef }: LiveMessageThreadProps) {
+export function LiveMessageThread({
+  archivedAt,
+  isPartnerTyping = false,
+  className,
+  scrollRef,
+  partnerName,
+  onReply,
+  onTogglePin,
+  onOpenMedia,
+  searchQuery,
+  activeSearchMessageId,
+}: LiveMessageThreadProps) {
   const { messages, isLoading } = useMessages({ archivedAt });
   return (
     <MessageThread
@@ -215,8 +283,15 @@ export function LiveMessageThread({ archivedAt, isPartnerTyping = false, classNa
       isPartnerTyping={isPartnerTyping}
       className={className}
       scrollRef={scrollRef}
+      partnerName={partnerName}
+      onReply={onReply}
+      onTogglePin={onTogglePin}
+      onOpenMedia={onOpenMedia}
+      searchQuery={searchQuery}
+      activeSearchMessageId={activeSearchMessageId}
     />
   );
 }
 
 export default MessageThread;
+

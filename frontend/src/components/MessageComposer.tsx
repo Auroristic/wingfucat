@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Icon } from './Icon';
 import { VoiceRecorder } from './VoiceRecorder';
+import { ReplyPreviewBar } from './ReplyPreviewBar';
 import { compressImage } from '../utils/imageCompressor';
 import { formatBytes, getFileCategory, getFileIconName } from '../utils/fileHelpers';
 import { pb } from '../lib/pocketbase';
@@ -289,6 +290,16 @@ export function MessageComposer({
               <Icon name="close" className="text-sm" />
             </button>
           </div>
+        )}
+
+        {replyToMessage && (
+          <ReplyPreviewBar
+            message={replyToMessage}
+            partnerName={partnerName}
+            currentUserId={propCurrentUserId ?? pb.authStore.record?.id}
+            onCancel={() => onCancelReply?.()}
+            className="mb-1"
+          />
         )}
 
         {isRecordingAudio ? (

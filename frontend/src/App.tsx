@@ -10,6 +10,7 @@ import { ThemeSettingsModal } from './components/ThemeSettingsModal';
 import { pb } from './lib/pocketbase';
 import { parseDate, toPocketBaseDate } from './utils/date';
 import { unlockAudioContext } from './utils/soundEffects';
+import type { Message } from './components/MessageBubble';
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -21,6 +22,7 @@ function AuthenticatedApp() {
   const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [isPartnerTypingExpired, setIsPartnerTypingExpired] = useState<boolean>(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
   // Local timestamp when partner update/heartbeat was last received on this device
   const partnerLastReceivedRef = useRef<number>(0);
@@ -428,6 +430,8 @@ function AuthenticatedApp() {
             isPartnerTyping={isPartnerTyping}
             className="flex-1"
             scrollRef={scrollThreadToBottomRef}
+            partnerName={partner?.display_name || partner?.username || 'Partner'}
+            onReply={(msg) => setReplyingTo(msg)}
           />
         </main>
 
@@ -439,6 +443,8 @@ function AuthenticatedApp() {
             isPartnerTyping={isPartnerTyping}
             partnerName={partner?.display_name || partner?.username || 'Partner'}
             onFocus={handleComposerFocus}
+            replyToMessage={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
           />
         </footer>
       </div>

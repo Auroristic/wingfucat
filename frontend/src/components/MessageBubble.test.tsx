@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MessageBubble, formatMessageTime } from './MessageBubble';
 import { ThemeProvider } from '../context/ThemeContext';
 import type { Message } from './MessageBubble';
@@ -229,6 +229,61 @@ describe('MessageBubble Component', () => {
     expect(screen.getByTestId('document-card')).toBeInTheDocument();
     expect(screen.getByText('contract.pdf')).toBeInTheDocument();
     expect(screen.getByText('1 MB')).toBeInTheDocument();
+  });
+
+  it('renders quoted reply header and navigates on click', () => {
+    const onNavigate = vi.fn();
+    const replyTarget: Message = {
+      id: 'msg-quoted-1',
+      sender: 'user-partner',
+      text: 'Original message being replied to',
+      created: '2026-09-22T15:00:00.000Z',
+    };
+
+    const replyMsg: Message = {
+      ...baseMessage,
+      reply_to: 'msg-quoted-1',
+      text: 'I agree with this!',
+    };
+
+    render(
+      <MessageBubble
+        message={replyMsg}
+        isSelf={true}
+        replyMessage={replyTarget}
+        onNavigateToMessage={onNavigate}
+        partnerName="Wingfu"
+      />
+    );
+
+    expect(screen.getByText('Wingfu')).toBeInTheDocument();
+    expect(screen.getByText('Original message being replied to')).toBeInTheDocument();
+
+    const quoteHeader = screen.getByRole('button', { name: /jump to quoted message/i });
+    fireEvent.click(quoteHeader);
+    expect(onNavigate).toHaveBeenCalledWith('msg-quoted-1');
+  });
+
+  it('triggers onReply when clicking desktop reply button or swiping right on mobile', () => {
+    const onReply = vi.fn();
+
+    render(
+      <MessageBubble
+        message={baseMessage}
+        isSelf={false}
+        onReply={onReply}
+      />
+    );
+
+    const replyBtn = screen.getByRole('button', { name: /reply to message/i });
+    fireEvent.click(replyBtn);
+    expect(onReply).toHaveBeenCalledWith(baseMessage);
+
+    // Test touch swipe right (diff > 40px)
+    const wrapper = screen.getByTestId('message-bubble-wrapper');
+    fireEvent.touchStart(wrapper, { touches: [{ clientX: 10 }] });
+    fireEvent.touchEnd(wrapper, { changedTouches: [{ clientX: 70 }] });
+    expect(onReply).toHaveBeenCalledTimes(2);
   });
 });
 
