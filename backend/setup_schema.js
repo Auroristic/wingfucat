@@ -144,9 +144,16 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
     listRule: '@request.auth.id != ""',
     viewRule: '@request.auth.id != ""',
     createRule: '@request.auth.id != "" && @request.body.sender = @request.auth.id',
-    updateRule: '@request.auth.id != "" && @request.auth.id != sender && @request.body.text:isset = false && @request.body.sender:isset = false && @request.body.attachment:isset = false && @request.body.media_type:isset = false && @request.body.duration:isset = false',
+    updateRule: '@request.auth.id != "" && @request.body.text:isset = false && @request.body.sender:isset = false && @request.body.attachment:isset = false && @request.body.media_type:isset = false && @request.body.duration:isset = false && @request.body.file_name:isset = false && @request.body.file_size:isset = false && @request.body.reply_to:isset = false && (@request.auth.id != sender || @request.body.read_at:isset = false)',
     deleteRule: '@request.auth.id != ""',
   };
+
+  let existingMessagesCollection = null;
+  try {
+    existingMessagesCollection = await pb.collections.getOne('messages');
+  } catch (_) {}
+
+  const messagesCollectionId = existingMessagesCollection ? existingMessagesCollection.id : 'messages';
 
   const messagesFields = [
     {
@@ -175,17 +182,25 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
       required: false,
       options: {
         maxSelect: 1,
-        maxSize: 26214400,
+        maxSize: 52428800,
         mimeTypes: [
           'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-          'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/aac'
+          'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/aac',
+          'video/mp4', 'video/webm', 'video/quicktime',
+          'application/pdf', 'application/zip', 'text/plain',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         ],
       },
       maxSelect: 1,
-      maxSize: 26214400,
+      maxSize: 52428800,
       mimeTypes: [
         'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-        'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/aac'
+        'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/aac',
+        'video/mp4', 'video/webm', 'video/quicktime',
+        'application/pdf', 'application/zip', 'text/plain',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       ],
     },
     {
@@ -193,10 +208,10 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
       type: 'select',
       required: true,
       options: {
-        values: ['text', 'image', 'audio'],
+        values: ['text', 'image', 'audio', 'video', 'file'],
         maxSelect: 1,
       },
-      values: ['text', 'image', 'audio'],
+      values: ['text', 'image', 'audio', 'video', 'file'],
       maxSelect: 1,
     },
     {
@@ -205,6 +220,43 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
       required: false,
       options: { min: 0 },
       min: 0,
+    },
+    {
+      name: 'file_name',
+      type: 'text',
+      required: false,
+      options: { max: 255 },
+      max: 255,
+    },
+    {
+      name: 'file_size',
+      type: 'number',
+      required: false,
+      options: { min: 0 },
+      min: 0,
+    },
+    {
+      name: 'reply_to',
+      type: 'relation',
+      required: false,
+      options: {
+        collectionId: messagesCollectionId,
+        cascadeDelete: false,
+        maxSelect: 1,
+      },
+      collectionId: messagesCollectionId,
+      cascadeDelete: false,
+      maxSelect: 1,
+    },
+    {
+      name: 'is_pinned',
+      type: 'bool',
+      required: false,
+    },
+    {
+      name: 'pinned_at',
+      type: 'date',
+      required: false,
     },
     {
       name: 'read_at',
@@ -226,7 +278,7 @@ export async function setupSchema(pbUrl = 'http://127.0.0.1:8090', adminEmail = 
   ];
 
   try {
-    const existing = await pb.collections.getOne('messages');
+    const existing = existingMessagesCollection || await pb.collections.getOne('messages');
     await pb.collections.update(existing.id, {
       ...messagesRules,
       fields: messagesFields,
