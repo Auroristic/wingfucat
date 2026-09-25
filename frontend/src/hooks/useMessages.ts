@@ -8,6 +8,7 @@ export interface UseMessagesOptions {
   archivedAt?: string | null;
   currentUserId?: string;
   autoMarkRead?: boolean;
+  enabled?: boolean;
 }
 
 export interface UseMessagesResult {
@@ -20,10 +21,10 @@ export interface UseMessagesResult {
 }
 
 export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult {
-  const { archivedAt: explicitArchivedAt, currentUserId: explicitUserId, autoMarkRead = true } = options;
+  const { archivedAt: explicitArchivedAt, currentUserId: explicitUserId, autoMarkRead = true, enabled = true } = options;
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<Error | null>(null);
 
   // Derive active current user id
@@ -117,11 +118,13 @@ export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult
 
   // Initial load
   useEffect(() => {
+    if (!enabled) return;
     fetchMessages();
-  }, [fetchMessages]);
+  }, [enabled, fetchMessages]);
 
   // Realtime SSE subscription
   useEffect(() => {
+    if (!enabled) return;
     let isSubscribed = true;
 
     const subPromise = pb.collection('messages').subscribe<Message>('*', (e: RecordSubscription<Message>) => {
@@ -173,7 +176,7 @@ export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult
       }).catch(() => {});
       pb.collection('messages').unsubscribe('*').catch(() => {});
     };
-  }, [explicitArchivedAt, autoMarkRead, markAsRead]);
+  }, [enabled, explicitArchivedAt, autoMarkRead, markAsRead]);
 
   // Window visibility & focus listener for read receipts
   useEffect(() => {

@@ -251,6 +251,8 @@ export function MessageThread({
 }
 
 export interface LiveMessageThreadProps {
+  messages?: Message[];
+  isLoading?: boolean;
   archivedAt?: string | null;
   isPartnerTyping?: boolean;
   className?: string;
@@ -264,6 +266,8 @@ export interface LiveMessageThreadProps {
 }
 
 export function LiveMessageThread({
+  messages: propMessages,
+  isLoading: propIsLoading,
   archivedAt,
   isPartnerTyping = false,
   className,
@@ -275,7 +279,12 @@ export function LiveMessageThread({
   searchQuery,
   activeSearchMessageId,
 }: LiveMessageThreadProps) {
-  const { messages, isLoading } = useMessages({ archivedAt });
+  const hookData = useMessages({
+    archivedAt,
+    enabled: propMessages === undefined,
+  });
+  const messages = propMessages ?? hookData.messages;
+  const isLoading = propIsLoading ?? hookData.isLoading;
   return (
     <MessageThread
       messages={messages}

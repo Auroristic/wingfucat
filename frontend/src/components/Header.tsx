@@ -35,6 +35,9 @@ export interface HeaderProps {
   onArchive?: () => void | Promise<void>;
   onOpenArchive?: () => void;
   onOpenThemeSettings?: () => void;
+  onOpenGallery?: () => void;
+  onToggleSearch?: () => void;
+  isSearchActive?: boolean;
   onLogout?: () => void;
   className?: string;
 }
@@ -49,6 +52,9 @@ export function Header({
   onArchive,
   onOpenArchive,
   onOpenThemeSettings,
+  onOpenGallery,
+  onToggleSearch,
+  isSearchActive = false,
   onLogout,
   className = '',
 }: HeaderProps) {
@@ -279,6 +285,36 @@ export function Header({
             >
               {currentUser.display_name || currentUser.username || currentUser.email}
             </span>
+          )}
+
+          {/* In-Chat Search button */}
+          {onToggleSearch && (
+            <button
+              type="button"
+              onClick={onToggleSearch}
+              aria-label="Search messages"
+              title="Search Messages"
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium cursor-pointer transition-all ${getHeaderButtonClasses()} ${
+                isSearchActive ? (themeId === 'terminal-tui' ? 'bg-[#00ff41] text-black font-bold' : 'bg-white/30 text-white') : ''
+              }`}
+            >
+              <Icon name="search" className="text-base text-inherit" />
+              <span className="hidden sm:inline">Search</span>
+            </button>
+          )}
+
+          {/* Shared Gallery button */}
+          {onOpenGallery && (
+            <button
+              type="button"
+              onClick={onOpenGallery}
+              aria-label="Shared media"
+              title="Shared Media"
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium cursor-pointer transition-all ${getHeaderButtonClasses()}`}
+            >
+              <Icon name="photo_library" className="text-base text-inherit" />
+              <span className="hidden sm:inline">Media</span>
+            </button>
           )}
 
           {/* View Archive button (visible when chat has an active archive boundary) */}

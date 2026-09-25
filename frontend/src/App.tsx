@@ -7,10 +7,13 @@ import { MessageComposer } from './components/MessageComposer';
 import { Header, type PartnerInfo } from './components/Header';
 import { ArchiveModal } from './components/ArchiveModal';
 import { ThemeSettingsModal } from './components/ThemeSettingsModal';
+import { SharedGalleryModal } from './components/SharedGalleryModal';
+import { MediaLightbox } from './components/MediaLightbox';
 import { pb } from './lib/pocketbase';
 import { parseDate, toPocketBaseDate } from './utils/date';
 import { unlockAudioContext } from './utils/soundEffects';
-import type { Message } from './components/MessageBubble';
+import { getMessageFileUrl, type Message } from './components/MessageBubble';
+import { useMessages } from './hooks/useMessages';
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -18,8 +21,21 @@ function AuthenticatedApp() {
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
   const [chatSettingsRecordId, setChatSettingsRecordId] = useState<string | null>(null);
   const [archivedAt, setArchivedAt] = useState<string | null>(null);
+  const { messages, isLoading } = useMessages({ archivedAt });
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState<boolean>(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState<boolean>(false);
+  const [lightboxState, setLightboxState] = useState<{
+    isOpen: boolean;
+    mediaUrl: string;
+    mediaType: 'image' | 'video';
+    caption?: string;
+    fileName?: string;
+  }>({
+    isOpen: false,
+    mediaUrl: '',
+    mediaType: 'image',
+  });
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [isPartnerTypingExpired, setIsPartnerTypingExpired] = useState<boolean>(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -420,18 +436,29 @@ function AuthenticatedApp() {
           onArchive={handleArchive}
           onOpenArchive={() => setIsArchiveModalOpen(true)}
           onOpenThemeSettings={() => setIsThemeModalOpen(true)}
+          onOpenGallery={() => setIsGalleryModalOpen(true)}
           onLogout={handleLogout}
         />
 
         {/* Main chat thread */}
         <main className="flex-1 overflow-hidden flex flex-col bg-transparent">
           <LiveMessageThread
+            messages={messages}
+            isLoading={isLoading}
             archivedAt={archivedAt}
             isPartnerTyping={isPartnerTyping}
             className="flex-1"
             scrollRef={scrollThreadToBottomRef}
             partnerName={partner?.display_name || partner?.username || 'Partner'}
             onReply={(msg) => setReplyingTo(msg)}
+            onOpenMedia={(url, type, caption) => {
+              setLightboxState({
+                isOpen: true,
+                mediaUrl: url,
+                mediaType: type,
+                caption,
+              });
+            }}
           />
         </main>
 
@@ -463,6 +490,35 @@ function AuthenticatedApp() {
       <ThemeSettingsModal
         isOpen={isThemeModalOpen}
         onClose={() => setIsThemeModalOpen(false)}
+      />
+
+      {/* Shared Media Gallery Modal */}
+      <SharedGalleryModal
+        isOpen={isGalleryModalOpen}
+        onClose={() => setIsGalleryModalOpen(false)}
+        messages={messages}
+        onSelectMedia={(msg) => {
+          const url = getMessageFileUrl(msg);
+          if (msg.media_type === 'image' || msg.media_type === 'video') {
+            setLightboxState({
+              isOpen: true,
+              mediaUrl: url,
+              mediaType: msg.media_type,
+              caption: msg.text,
+              fileName: msg.file_name,
+            });
+          }
+        }}
+      />
+
+      {/* Full-Screen Media Lightbox */}
+      <MediaLightbox
+        isOpen={lightboxState.isOpen}
+        onClose={() => setLightboxState((prev) => ({ ...prev, isOpen: false }))}
+        mediaUrl={lightboxState.mediaUrl}
+        mediaType={lightboxState.mediaType}
+        caption={lightboxState.caption}
+        fileName={lightboxState.fileName}
       />
     </div>
   );

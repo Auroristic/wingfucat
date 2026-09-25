@@ -132,6 +132,26 @@ describe('Header Component', () => {
     expect(authLogoutMock).toHaveBeenCalledTimes(1);
   });
 
+  it('renders search and media buttons and triggers callbacks', () => {
+    const onSearch = vi.fn();
+    const onGallery = vi.fn();
+
+    render(
+      <Header
+        onToggleSearch={onSearch}
+        onOpenGallery={onGallery}
+      />
+    );
+
+    const searchBtn = screen.getByRole('button', { name: /search messages/i });
+    fireEvent.click(searchBtn);
+    expect(onSearch).toHaveBeenCalledTimes(1);
+
+    const galleryBtn = screen.getByRole('button', { name: /shared media/i });
+    fireEvent.click(galleryBtn);
+    expect(onGallery).toHaveBeenCalledTimes(1);
+  });
+
   it('archive button opens confirmation dialog and confirms archive action', async () => {
     const mockArchive = vi.fn();
     render(<Header onArchive={mockArchive} />);

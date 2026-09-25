@@ -195,4 +195,16 @@ describe('useMessages hook', () => {
       expect(unsubscribeMock).toHaveBeenCalled();
     });
   });
+
+  it('does not fetch or subscribe when enabled is false', async () => {
+    const getFullListSpy = vi.spyOn(pb.collection('messages'), 'getFullList');
+    const subscribeSpy = vi.spyOn(pb.collection('messages'), 'subscribe');
+
+    const { result } = renderHook(() => useMessages({ enabled: false }));
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.messages).toEqual([]);
+    expect(getFullListSpy).not.toHaveBeenCalled();
+    expect(subscribeSpy).not.toHaveBeenCalled();
+  });
 });

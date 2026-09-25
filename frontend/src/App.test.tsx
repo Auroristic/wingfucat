@@ -21,6 +21,9 @@ describe('App Root Component', () => {
     ] as any);
     vi.spyOn(pb.collection('chat_settings'), 'subscribe').mockResolvedValue(vi.fn());
     vi.spyOn(pb.collection('chat_settings'), 'unsubscribe').mockResolvedValue(undefined);
+    vi.spyOn(pb.collection('messages'), 'getFullList').mockResolvedValue([] as any);
+    vi.spyOn(pb.collection('messages'), 'subscribe').mockResolvedValue(vi.fn());
+    vi.spyOn(pb.collection('messages'), 'unsubscribe').mockResolvedValue(undefined);
   });
 
   it('renders LoginView when user is not authenticated', () => {
@@ -110,5 +113,32 @@ describe('App Root Component', () => {
     expect(screen.queryByRole('dialog', { name: /appearance & themes/i })).toBeNull();
     fireEvent.click(themeBtn);
     expect(screen.getByRole('dialog', { name: /appearance & themes/i })).toBeInTheDocument();
+  });
+
+  it('opens SharedGalleryModal when Media button is clicked', () => {
+    vi.spyOn(AuthModule, 'useAuth').mockReturnValue({
+      user: {
+        id: 'u-1',
+        collectionId: 'users',
+        collectionName: 'users',
+        email: 'alice@example.com',
+        username: 'alice',
+        display_name: 'Alice',
+        avatar: '',
+        created: '2026-09-22',
+        updated: '2026-09-22',
+      },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(<App />);
+    const mediaBtn = screen.getByRole('button', { name: /shared media/i });
+    expect(mediaBtn).toBeInTheDocument();
+
+    expect(screen.queryByTestId('shared-gallery-modal')).toBeNull();
+    fireEvent.click(mediaBtn);
+    expect(screen.getByTestId('shared-gallery-modal')).toBeInTheDocument();
   });
 });
