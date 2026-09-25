@@ -9,6 +9,7 @@ import { ArchiveModal } from './components/ArchiveModal';
 import { ThemeSettingsModal } from './components/ThemeSettingsModal';
 import { SharedGalleryModal } from './components/SharedGalleryModal';
 import { MediaLightbox } from './components/MediaLightbox';
+import { SearchOverlay } from './components/SearchOverlay';
 import { pb } from './lib/pocketbase';
 import { parseDate, toPocketBaseDate } from './utils/date';
 import { unlockAudioContext } from './utils/soundEffects';
@@ -39,6 +40,9 @@ function AuthenticatedApp() {
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [isPartnerTypingExpired, setIsPartnerTypingExpired] = useState<boolean>(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isSearchActive, setIsSearchActive] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeSearchMessageId, setActiveSearchMessageId] = useState<string | undefined>(undefined);
 
   // Local timestamp when partner update/heartbeat was last received on this device
   const partnerLastReceivedRef = useRef<number>(0);
@@ -437,7 +441,32 @@ function AuthenticatedApp() {
           onOpenArchive={() => setIsArchiveModalOpen(true)}
           onOpenThemeSettings={() => setIsThemeModalOpen(true)}
           onOpenGallery={() => setIsGalleryModalOpen(true)}
+          onToggleSearch={() => {
+            setIsSearchActive((prev) => {
+              if (prev) {
+                setSearchQuery('');
+                setActiveSearchMessageId(undefined);
+              }
+              return !prev;
+            });
+          }}
+          isSearchActive={isSearchActive}
           onLogout={handleLogout}
+        />
+
+        {/* In-Chat Keyword Search Bar */}
+        <SearchOverlay
+          isOpen={isSearchActive}
+          onClose={() => {
+            setIsSearchActive(false);
+            setSearchQuery('');
+            setActiveSearchMessageId(undefined);
+          }}
+          messages={messages}
+          onActiveMatchChange={(id, q) => {
+            setActiveSearchMessageId(id ?? undefined);
+            setSearchQuery(q);
+          }}
         />
 
         {/* Main chat thread */}
@@ -451,6 +480,8 @@ function AuthenticatedApp() {
             scrollRef={scrollThreadToBottomRef}
             partnerName={partner?.display_name || partner?.username || 'Partner'}
             onReply={(msg) => setReplyingTo(msg)}
+            searchQuery={searchQuery}
+            activeSearchMessageId={activeSearchMessageId}
             onOpenMedia={(url, type, caption) => {
               setLightboxState({
                 isOpen: true,

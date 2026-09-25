@@ -141,4 +141,34 @@ describe('App Root Component', () => {
     fireEvent.click(mediaBtn);
     expect(screen.getByTestId('shared-gallery-modal')).toBeInTheDocument();
   });
+
+  it('toggles SearchOverlay when Search button is clicked', () => {
+    vi.spyOn(AuthModule, 'useAuth').mockReturnValue({
+      user: {
+        id: 'u-1',
+        collectionId: 'users',
+        collectionName: 'users',
+        email: 'alice@example.com',
+        username: 'alice',
+        display_name: 'Alice',
+        avatar: '',
+        created: '2026-09-22',
+        updated: '2026-09-22',
+      },
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(<App />);
+    const searchBtn = screen.getByRole('button', { name: /search messages/i });
+    expect(searchBtn).toBeInTheDocument();
+
+    expect(screen.queryByTestId('search-overlay')).toBeNull();
+    fireEvent.click(searchBtn);
+    expect(screen.getByTestId('search-overlay')).toBeInTheDocument();
+
+    fireEvent.click(searchBtn);
+    expect(screen.queryByTestId('search-overlay')).toBeNull();
+  });
 });
