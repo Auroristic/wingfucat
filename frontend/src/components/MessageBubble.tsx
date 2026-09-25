@@ -1,5 +1,7 @@
 import { Icon } from './Icon';
 import { AudioPlayer } from './AudioPlayer';
+import { DocumentCard } from './DocumentCard';
+import { VideoPlayer } from './VideoPlayer';
 import { pb } from '../lib/pocketbase';
 import { useTheme, type BubbleStyle } from '../context/ThemeContext';
 
@@ -8,8 +10,13 @@ export interface Message {
   sender: string;
   text?: string;
   attachment?: string;
-  media_type?: 'text' | 'image' | 'audio';
+  media_type?: 'text' | 'image' | 'audio' | 'video' | 'file';
   duration?: number;
+  file_name?: string;
+  file_size?: number;
+  reply_to?: string;
+  is_pinned?: boolean;
+  pinned_at?: string;
   read_at?: string | null;
   created: string;
   updated?: string;
@@ -19,6 +26,12 @@ export interface MessageBubbleProps {
   message: Message;
   isSelf?: boolean;
   currentUserId?: string;
+  onOpenMedia?: (url: string, type: 'image' | 'video', caption?: string) => void;
+  onReply?: (message: Message) => void;
+  onTogglePin?: (messageId: string, currentPinned: boolean) => void;
+  onNavigateToMessage?: (messageId: string) => void;
+  searchQuery?: string;
+  replyMessage?: Message | null;
 }
 
 export function formatMessageTime(dateString: string): string {
@@ -51,7 +64,17 @@ export function getBubbleShapeClasses(isOwn: boolean, style: BubbleStyle): strin
   }
 }
 
-export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  isSelf,
+  currentUserId,
+  onOpenMedia,
+  onReply,
+  onTogglePin,
+  onNavigateToMessage,
+  searchQuery,
+  replyMessage,
+}: MessageBubbleProps) {
   const { theme } = useTheme();
   const isOwn = isSelf ?? (currentUserId ? message.sender === currentUserId : false);
   const fileUrl = getMessageFileUrl(message);
@@ -81,8 +104,9 @@ export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleP
 
   return (
     <div
+      id={`message-${message.id}`}
       data-testid="message-bubble-wrapper"
-      className={`flex w-full ${isOwn ? 'justify-end' : 'justify-start'}`}
+      className={`group/wrapper relative flex w-full my-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}
     >
       <div
         className="max-w-[85%] sm:max-w-[75%] md:max-w-[65%]"
@@ -121,12 +145,31 @@ export function MessageBubble({ message, isSelf, currentUserId }: MessageBubbleP
                 loading="lazy"
                 className="max-h-80 w-auto rounded-xl object-cover hover:opacity-95 transition-opacity cursor-pointer"
                 onClick={() => {
-                  if (typeof window !== 'undefined') {
+                  if (onOpenMedia) {
+                    onOpenMedia(fileUrl, 'image', message.text);
+                  } else if (typeof window !== 'undefined') {
                     window.open(fileUrl, '_blank', 'noopener,noreferrer');
                   }
                 }}
               />
             </div>
+          )}
+
+          {message.media_type === 'video' && fileUrl && (
+            <VideoPlayer
+              src={fileUrl}
+              isSelf={isOwn}
+              onOpenFullscreen={() => onOpenMedia?.(fileUrl, 'video', message.text)}
+            />
+          )}
+
+          {message.media_type === 'file' && fileUrl && (
+            <DocumentCard
+              fileName={message.file_name}
+              fileSize={message.file_size}
+              fileUrl={fileUrl}
+              isSelf={isOwn}
+            />
           )}
 
           {message.media_type === 'audio' && fileUrl && (

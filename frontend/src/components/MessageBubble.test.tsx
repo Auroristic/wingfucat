@@ -196,5 +196,39 @@ describe('MessageBubble Component', () => {
     expect(bubble).toBeInTheDocument();
     expect(bubble.style.backdropFilter).toBe('var(--theme-bubble-backdrop, none)');
   });
+
+  it('renders VideoPlayer when media_type is video', () => {
+    const videoMsg: Message = {
+      ...baseMessage,
+      id: 'msg-vid-1',
+      media_type: 'video',
+      attachment: 'clip.mp4',
+    };
+
+    render(<MessageBubble message={videoMsg} isSelf={true} />);
+
+    expect(screen.getByTestId('video-player')).toBeInTheDocument();
+    expect(screen.getByTestId('video-element')).toHaveAttribute(
+      'src',
+      expect.stringContaining('/api/files/messages/msg-vid-1/clip.mp4')
+    );
+  });
+
+  it('renders DocumentCard when media_type is file', () => {
+    const fileMsg: Message = {
+      ...baseMessage,
+      id: 'msg-doc-1',
+      media_type: 'file',
+      attachment: 'contract.pdf',
+      file_name: 'contract.pdf',
+      file_size: 1048576,
+    };
+
+    render(<MessageBubble message={fileMsg} isSelf={false} />);
+
+    expect(screen.getByTestId('document-card')).toBeInTheDocument();
+    expect(screen.getByText('contract.pdf')).toBeInTheDocument();
+    expect(screen.getByText('1 MB')).toBeInTheDocument();
+  });
 });
 
