@@ -18,5 +18,28 @@ const getPocketBaseUrl = (): string => {
 export const authStore = new PublicDeviceAuthStore();
 export const pb = new PocketBase(getPocketBaseUrl(), authStore);
 
+export async function getArchiveBoundaryTimestamp(): Promise<string> {
+  try {
+    const latestMsgList = await pb.collection('messages').getList(1, 1, {
+      sort: '-created',
+    });
+    if (latestMsgList.items.length > 0) {
+      return latestMsgList.items[0].created;
+    }
+  } catch (_) {}
+
+  try {
+    const res = await fetch(`${pb.baseUrl}/api/health`, { method: 'HEAD' });
+    const serverDate = res.headers.get('date');
+    if (serverDate) {
+      const d = new Date(serverDate);
+      return d.toISOString().replace('T', ' ');
+    }
+  } catch (_) {}
+
+  return new Date().toISOString().replace('T', ' ');
+}
+
 export default pb;
+
 

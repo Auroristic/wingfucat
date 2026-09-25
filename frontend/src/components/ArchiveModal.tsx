@@ -64,7 +64,7 @@ export function ArchiveModal({
       setIsLoading(true);
       try {
         const pbArchivedAt = toPocketBaseDate(archivedAt);
-        const filter = `created < "${pbArchivedAt}"`;
+        const filter = `created <= "${pbArchivedAt}"`;
         const records = await pb.collection('messages').getFullList<Message>({
           filter,
           sort: 'created',

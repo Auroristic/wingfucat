@@ -100,7 +100,7 @@ export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult
       }
 
       const pbArchivedAt = resolvedArchivedAt ? toPocketBaseDate(resolvedArchivedAt) : '';
-      const filter = pbArchivedAt ? `created >= "${pbArchivedAt}"` : '';
+      const filter = pbArchivedAt ? `created > "${pbArchivedAt}"` : '';
       const records = await pb.collection('messages').getFullList<Message>({
         filter,
         sort: 'created',
@@ -129,7 +129,7 @@ export function useMessages(options: UseMessagesOptions = {}): UseMessagesResult
 
       if (e.action === 'create') {
         // Apply archive filter if set using numerical epoch comparison
-        if (explicitArchivedAt && parseDate(e.record.created) < parseDate(explicitArchivedAt)) {
+        if (explicitArchivedAt && parseDate(e.record.created) <= parseDate(explicitArchivedAt)) {
           return;
         }
 
